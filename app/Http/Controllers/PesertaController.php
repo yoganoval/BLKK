@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 class PesertaController extends Controller
 {
@@ -60,8 +62,9 @@ class PesertaController extends Controller
         return Inertia::render('Peserta/Create');
     }
 
+
     /**
-     * Simpan akun peserta baru.
+     * Simpan akun peserta baru sekaligus memberikan role.
      */
     public function store(Request $request)
     {
@@ -91,7 +94,8 @@ class PesertaController extends Controller
             'nama.required' => 'Nama peserta wajib diisi.',
             'username.required' => 'Username wajib diisi.',
             'username.unique' => 'Username sudah digunakan peserta lain.',
-            'username.alpha_dash' => 'Username hanya boleh berisi huruf, angka, tanda hubung, dan garis bawah.',
+            'username.alpha_dash' =>
+                'Username hanya boleh berisi huruf, angka, tanda hubung, dan garis bawah.',
             'password.required' => 'Password wajib diisi.',
             'password.min' => 'Password minimal 8 karakter.',
             'password.confirmed' => 'Konfirmasi password tidak cocok.',
@@ -100,11 +104,22 @@ class PesertaController extends Controller
         $validated['password'] = Hash::make($validated['password']);
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        Peserta::create($validated);
+        DB::transaction(function () use ($validated) {
+            // 1. Simpan data peserta
+            $peserta = Peserta::create($validated);
+
+            // 2. Ambil role Peserta sesuai guard model
+            $role = Role::where('name', 'Peserta')
+                ->where('guard_name', 'peserta')
+                ->firstOrFail();
+
+            // 3. Hubungkan peserta dengan role Spatie
+            $peserta->assignRole($role);
+        });
 
         return redirect()
             ->route('pesertas.index')
-            ->with('success', 'Akun peserta berhasil dibuat.');
+            ->with('success', 'Akun peserta berhasil dibuat dengan role Peserta.');
     }
 
     /**

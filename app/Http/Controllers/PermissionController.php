@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
+// use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+// use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionController extends Controller
 {
@@ -103,18 +107,31 @@ class PermissionController extends Controller
                     'required',
                     'string',
                     'max:255',
-                    'unique:permissions,name,' . $permission->id,
+                    Rule::unique('permissions', 'name')
+                        ->where('guard_name', $request->input('guard_name'))
+                        ->ignore($permission->id),
+                ],
+
+                'guard_name' => [
+                    'required',
+                    'string',
+                    Rule::in(['web', 'peserta']),
                 ],
             ],
             [
                 'name.required' => 'Nama permission wajib diisi.',
                 'name.unique' => 'Nama permission sudah digunakan.',
+                'guard_name.required' => 'Guard name wajib dipilih.',
+                'guard_name.in' => 'Guard name tidak valid.',
             ]
         );
 
         $permission->update([
             'name' => trim($validated['name']),
+            'guard_name' => $validated['guard_name'],
         ]);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return redirect()
             ->route('permissions.index')

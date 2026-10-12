@@ -51,21 +51,26 @@ Route::middleware('guest:peserta')->group(function () {
     ])->name('peserta.login.store');
 });
 
-// Dashboard peserta tanpa middleware role
-Route::middleware('auth:peserta')
-    ->prefix('peserta')
-    ->name('peserta.')
-    ->group(function () {
-        Route::get('/dashboard', [
-            PesertaDashboardController::class,
-            'index',
-        ])->name('dashboard');
 
-        Route::post('/logout', [
-            PesertaLoginController::class,
-            'destroy',
-        ])->name('logout');
-    });
+// Dashboard peserta
+Route::get('/peserta/dashboard', [
+    PesertaDashboardController::class,
+    'index',
+])
+    ->middleware([
+        'auth:peserta',
+        'permission:peserta.dashboard.index,peserta',
+    ])
+    ->name('peserta.dashboard');
+
+
+// Logout peserta
+Route::post('/peserta/logout', [
+    PesertaLoginController::class,
+    'destroy',
+])
+    ->middleware('auth:peserta')
+    ->name('peserta.logout');
 
 
 

@@ -1,47 +1,63 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Inventaris extends Model
 {
-    public function up(): void
+    protected $table = 'inventaris';
+
+    protected $fillable = [
+        'kode',
+        'barcode',
+        'nama',
+        'kategori_id',
+        'jumlah',
+        'satuan',
+        'kondisi',
+        'lokasi',
+        'tahun_perolehan',
+        'harga_perolehan',
+        'sumber_dana',
+        'keterangan',
+    ];
+
+    protected function casts(): array
     {
-        Schema::create('progres_peserta', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('peserta_id')
-                ->constrained('peserta')
-                ->cascadeOnDelete();
-
-            $table->foreignId('materi_id')
-                ->constrained('materi')
-                ->cascadeOnDelete();
-
-            $table->decimal('persentase', 5, 2)
-                ->default(0);
-
-            $table->enum('status', [
-                'belum_mulai',
-                'sedang_dipelajari',
-                'selesai'
-            ])->default('belum_mulai');
-
-            $table->timestamp('mulai_at')->nullable();
-            $table->timestamp('selesai_at')->nullable();
-
-            $table->timestamps();
-
-            $table->unique([
-                'peserta_id',
-                'materi_id'
-            ]);
-        });
+        return [
+            'jumlah' => 'integer',
+            'tahun_perolehan' => 'integer',
+            'harga_perolehan' => 'decimal:2',
+        ];
     }
 
-    public function down(): void
+    public function kategori(): BelongsTo
     {
-        Schema::dropIfExists('progres_peserta');
+        return $this->belongsTo(
+            KategoriInventaris::class,
+            'kategori_id'
+        );
     }
-};
+
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(
+            InventarisFile::class,
+            'inventaris_id'
+        );
+    }
+
+
+    public function riwayat(): HasMany
+    {
+        return $this->hasMany(
+            InventarisRiwayat::class,
+            'inventaris_id'
+        )->latest('tanggal');
+    }
+
+}

@@ -1,51 +1,44 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class LpjPengeluaran extends Model
 {
-    public function up(): void
+    protected $table = 'lpj_pengeluaran';
+
+    protected $fillable = [
+        'lpj_keuangan_id',
+        'tanggal',
+        'kategori',
+        'uraian',
+        'nomor_bukti',
+        'jumlah',
+        'metode_pembayaran',
+        'penerima',
+        'bukti_path',
+        'bukti_nama',
+        'bukti_mime',
+        'bukti_ukuran',
+        'keterangan',
+    ];
+
+    protected function casts(): array
     {
-        Schema::create('materi', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('pelatihan_id')
-                ->constrained('pelatihan')
-                ->cascadeOnDelete();
-
-            $table->foreignId('kelas_id')
-                ->constrained('kelas')
-                ->cascadeOnDelete();
-
-            $table->foreignId('tahap_id')
-                ->nullable()
-                ->constrained('tahap')
-                ->nullOnDelete();
-
-            $table->string('judul');
-            $table->text('deskripsi')->nullable();
-            $table->longText('isi_materi')->nullable();
-
-            $table->unsignedInteger('urutan')->default(1);
-
-            $table->enum('status', [
-                'draft',
-                'published',
-            ])->default('draft');
-
-            $table->timestamps();
-
-            $table->index(
-                ['pelatihan_id', 'kelas_id', 'tahap_id'],
-                'materi_program_index'
-            );
-        });
+        return [
+            'tanggal' => 'date',
+            'jumlah' => 'decimal:2',
+            'bukti_ukuran' => 'integer',
+        ];
     }
 
-    public function down(): void
+    public function lpjKeuangan(): BelongsTo
     {
-        Schema::dropIfExists('materi');
+        return $this->belongsTo(
+            LpjKeuangan::class,
+            'lpj_keuangan_id'
+        );
     }
-};
+}

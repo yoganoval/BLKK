@@ -175,6 +175,9 @@ const submit = () => {
                             <option value="web">
                                 web
                             </option>
+                            <option value="peserta">
+                                peserta
+                            </option>
                         </select>
 
                         <p
