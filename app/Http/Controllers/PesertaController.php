@@ -4,34 +4,56 @@ namespace App\Http\Controllers;
 
 use App\Models\Peserta;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class PesertaController extends Controller
 {
     /**
-     * Daftar peserta.
+     * Daftar dan pencarian akun peserta.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $pesertas = Peserta::with([
-            'pesertaFace',
-        ])
+        $search = trim($request->input('search', ''));
+
+        $pesertas = Peserta::query()
+            ->with(['pesertaFace'])
             ->withCount([
                 'pendaftarans',
                 'pendaftarans as pendaftaran_aktif_count' => function ($query) {
                     $query->where('status', 'aktif');
                 },
             ])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('nama', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('kamar', 'like', "%{$search}%")
+                        ->orWhere('lembaga', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('nama')
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
-        return Inertia::render('Peserta/Index', [
-            'pesertas' => $pesertas,
-        ]);
+            $totalLembaga = Peserta::query()
+                ->whereNotNull('lembaga')
+                ->where('lembaga', '<>', '')
+                ->distinct()
+                ->count('lembaga');
+                
+            return Inertia::render('Peserta/Index', [
+                'pesertas' => $pesertas,
+                'filters' => [
+                    'search' => $search,
+                ],
+                'totalLembaga' => $totalLembaga,
+            ]);
     }
 
     /**
-     * Form tambah peserta.
+     * Form tambah akun peserta.
      */
     public function create()
     {
@@ -39,43 +61,54 @@ class PesertaController extends Controller
     }
 
     /**
-     * Simpan peserta.
+     * Simpan akun peserta baru.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nama' => [
+            'nama' => ['required', 'string', 'max:255'],
+            'alamat' => ['nullable', 'string'],
+            'kamar' => ['nullable', 'string', 'max:100'],
+            'lembaga' => ['nullable', 'string', 'max:255'],
+
+            'username' => [
                 'required',
                 'string',
                 'max:255',
+                'alpha_dash',
+                'unique:peserta,username',
             ],
-            'alamat' => [
-                'nullable',
+
+            'password' => [
+                'required',
                 'string',
+                'min:8',
+                'confirmed',
             ],
-            'kamar' => [
-                'nullable',
-                'string',
-                'max:100',
-            ],
-            'lembaga' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+
+            'is_active' => ['sometimes', 'boolean'],
         ], [
             'nama.required' => 'Nama peserta wajib diisi.',
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username sudah digunakan peserta lain.',
+            'username.alpha_dash' => 'Username hanya boleh berisi huruf, angka, tanda hubung, dan garis bawah.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
         ]);
+
+        $validated['password'] = Hash::make($validated['password']);
+        $validated['is_active'] = $request->boolean('is_active', true);
 
         Peserta::create($validated);
 
         return redirect()
             ->route('pesertas.index')
-            ->with('success', 'Peserta berhasil ditambahkan.');
+            ->with('success', 'Akun peserta berhasil dibuat.');
     }
 
     /**
-     * Detail peserta.
+     * Detail akun dan seluruh pendaftaran pelatihan.
      */
     public function show(Peserta $peserta)
     {
@@ -94,7 +127,7 @@ class PesertaController extends Controller
     }
 
     /**
-     * Form edit.
+     * Form edit akun peserta.
      */
     public function edit(Peserta $peserta)
     {
@@ -104,57 +137,69 @@ class PesertaController extends Controller
     }
 
     /**
-     * Update peserta.
+     * Perbarui data akun peserta.
      */
     public function update(Request $request, Peserta $peserta)
     {
         $validated = $request->validate([
-            'nama' => [
+            'nama' => ['required', 'string', 'max:255'],
+            'alamat' => ['nullable', 'string'],
+            'kamar' => ['nullable', 'string', 'max:100'],
+            'lembaga' => ['nullable', 'string', 'max:255'],
+
+            'username' => [
                 'required',
                 'string',
                 'max:255',
+                'alpha_dash',
+                Rule::unique('peserta', 'username')->ignore($peserta->id),
             ],
-            'alamat' => [
+
+            'password' => [
                 'nullable',
                 'string',
+                'min:8',
+                'confirmed',
             ],
-            'kamar' => [
-                'nullable',
-                'string',
-                'max:100',
-            ],
-            'lembaga' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+
+            'is_active' => ['required', 'boolean'],
         ], [
             'nama.required' => 'Nama peserta wajib diisi.',
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username sudah digunakan peserta lain.',
+            'password.min' => 'Password minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
         ]);
+
+        if (!empty($validated['password'])) {
+            $validated['password'] = Hash::make($validated['password']);
+        } else {
+            unset($validated['password']);
+        }
 
         $peserta->update($validated);
 
         return redirect()
             ->route('pesertas.index')
-            ->with('success', 'Data peserta berhasil diperbarui.');
+            ->with('success', 'Data akun peserta berhasil diperbarui.');
     }
 
     /**
-     * Hapus peserta.
+     * Hapus akun peserta jika belum memiliki relasi.
      */
     public function destroy(Peserta $peserta)
     {
         if ($peserta->pendaftarans()->exists()) {
             return back()->with(
                 'error',
-                'Peserta tidak dapat dihapus karena sudah memiliki data pendaftaran.'
+                'Akun tidak dapat dihapus karena sudah memiliki data pendaftaran.'
             );
         }
 
         if ($peserta->pesertaFace()->exists()) {
             return back()->with(
                 'error',
-                'Peserta tidak dapat dihapus karena masih memiliki data wajah.'
+                'Akun tidak dapat dihapus karena masih memiliki data wajah.'
             );
         }
 
@@ -162,6 +207,6 @@ class PesertaController extends Controller
 
         return redirect()
             ->route('pesertas.index')
-            ->with('success', 'Peserta berhasil dihapus.');
+            ->with('success', 'Akun peserta berhasil dihapus.');
     }
 }

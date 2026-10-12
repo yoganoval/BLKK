@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Kelas extends Model
 {
@@ -34,5 +35,15 @@ class Kelas extends Model
             'kelas_id',
             'id'
         );
+    }
+
+    public function jadwals(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Jadwal::class,
+            'jadwal_kelas',
+            'kelas_id',
+            'jadwal_id'
+        )->withTimestamps();
     }
 }

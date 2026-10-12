@@ -1,36 +1,30 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class PesertaFace extends Model
 {
-    public function up(): void
+    protected $table = 'peserta_faces';
+
+    protected $fillable = [
+        'peserta_id',
+        'face_embedding',
+        'photo_path',
+        'registered_at',
+    ];
+
+    protected function casts(): array
     {
-        Schema::create('peserta_faces', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('peserta_id')
-                ->unique()
-                ->constrained('peserta')
-                ->cascadeOnUpdate()
-                ->cascadeOnDelete();
-
-            $table->longText('face_embedding');
-
-            $table->string('photo_path')
-                ->nullable();
-
-            $table->timestamp('registered_at')
-                ->nullable();
-
-            $table->timestamps();
-        });
+        return [
+            'registered_at' => 'datetime',
+        ];
     }
 
-    public function down(): void
+    public function peserta(): BelongsTo
     {
-        Schema::dropIfExists('peserta_faces');
+        return $this->belongsTo(Peserta::class, 'peserta_id');
     }
-};
+}

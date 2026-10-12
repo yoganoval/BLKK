@@ -1,42 +1,60 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+class Jadwal extends Model
 {
-    public function up(): void
+    use HasFactory;
+
+    protected $table = 'jadwal';
+
+    protected $fillable = [
+        'program_pelatihan_id',
+        'pertemuan',
+        'tanggal',
+        'jam_mulai',
+        'jam_selesai',
+        'kegiatan',
+        'keterangan',
+        'status',
+    ];
+
+    protected function casts(): array
     {
-        Schema::create('soal', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('kuis_id')
-                ->constrained('kuis')
-                ->cascadeOnDelete();
-
-            $table->longText('pertanyaan');
-
-            $table->enum('tipe', [
-                'pilihan_ganda',
-                'benar_salah',
-                'essay'
-            ])->default('pilihan_ganda');
-
-            $table->decimal('bobot', 5, 2)
-                ->default(1);
-
-            $table->unsignedInteger('urutan')
-                ->default(1);
-
-            $table->timestamps();
-
-            $table->index(['kuis_id', 'urutan']);
-        });
+        return [
+            'tanggal' => 'date',
+            'pertemuan' => 'integer',
+        ];
     }
 
-    public function down(): void
+    public function programPelatihan(): BelongsTo
     {
-        Schema::dropIfExists('soal');
+        return $this->belongsTo(
+            ProgramPelatihan::class,
+            'program_pelatihan_id'
+        );
     }
-};
+
+    public function absensis(): HasMany
+    {
+        return $this->hasMany(
+            Absensi::class,
+            'jadwal_id'
+        );
+    }
+    public function kelas(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Kelas::class,
+            'jadwal_kelas',
+            'jadwal_id',
+            'kelas_id'
+        )->withTimestamps();
+    }
+}

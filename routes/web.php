@@ -34,6 +34,43 @@ use App\Http\Controllers\TahapController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\UserFaceController;
+use Inertia\Inertia;
+use App\Http\Controllers\PesertaDashboardController;
+use App\Http\Controllers\Auth\PesertaLoginController;
+
+// Login peserta
+Route::middleware('guest:peserta')->group(function () {
+    Route::get('/peserta/login', [
+        PesertaLoginController::class,
+        'create',
+    ])->name('peserta.login');
+
+    Route::post('/peserta/login', [
+        PesertaLoginController::class,
+        'store',
+    ])->name('peserta.login.store');
+});
+
+// Dashboard peserta tanpa middleware role
+Route::middleware('auth:peserta')
+    ->prefix('peserta')
+    ->name('peserta.')
+    ->group(function () {
+        Route::get('/dashboard', [
+            PesertaDashboardController::class,
+            'index',
+        ])->name('dashboard');
+
+        Route::post('/logout', [
+            PesertaLoginController::class,
+            'destroy',
+        ])->name('logout');
+    });
+
+
+
+
+
 
 
 /*

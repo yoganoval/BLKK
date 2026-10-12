@@ -11,10 +11,19 @@ return new class extends Migration
         Schema::create('peserta', function (Blueprint $table) {
             $table->id();
 
+            // Identitas peserta
             $table->string('nama');
             $table->text('alamat')->nullable();
             $table->string('kamar')->nullable();
             $table->string('lembaga')->nullable();
+
+            // Akun login peserta
+            $table->string('username')->unique();
+            $table->string('password');
+            $table->rememberToken();
+
+            // Status akun
+            $table->boolean('is_active')->default(true);
 
             $table->timestamps();
         });

@@ -1,45 +1,36 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class PesertaFace extends Model
 {
-    public function up(): void
+    use HasFactory;
+
+    protected $table = 'peserta_faces';
+
+    protected $fillable = [
+        'peserta_id',
+        'face_embedding',
+        'photo_path',
+        'registered_at',
+    ];
+
+    protected function casts(): array
     {
-        Schema::create('opsi_jawaban', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('soal_id')
-                ->constrained('soal')
-                ->cascadeOnDelete();
-
-            $table->string('opsi', 5);
-            $table->longText('teks');
-
-            $table->boolean('is_correct')
-                ->default(false);
-
-            $table->unsignedInteger('urutan')
-                ->default(1);
-
-            $table->timestamps();
-
-            $table->unique(
-                ['soal_id', 'opsi'],
-                'opsi_jawaban_soal_opsi_unique'
-            );
-
-            $table->unique(
-                ['soal_id', 'urutan'],
-                'opsi_jawaban_soal_urutan_unique'
-            );
-        });
+        return [
+            'registered_at' => 'datetime',
+        ];
     }
 
-    public function down(): void
+    public function peserta(): BelongsTo
     {
-        Schema::dropIfExists('opsi_jawaban');
+        return $this->belongsTo(
+            Peserta::class,
+            'peserta_id'
+        );
     }
-};
+}

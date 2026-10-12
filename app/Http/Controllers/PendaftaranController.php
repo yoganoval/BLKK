@@ -36,9 +36,21 @@ class PendaftaranController extends Controller
 
     /**
      * Form pendaftaran.
+     * Peserta harus sudah dibuat melalui menu Peserta.
      */
     public function create()
     {
+        $pesertas = Peserta::query()
+            ->where('is_active', true)
+            ->orderBy('nama')
+            ->get([
+                'id',
+                'nama',
+                'username',
+                'kamar',
+                'lembaga',
+            ]);
+
         $programPelatihans = ProgramPelatihan::with([
             'pelatihan',
             'tahap',
@@ -50,59 +62,34 @@ class PendaftaranController extends Controller
         $kelass = Kelas::orderBy('nama')->get();
 
         return Inertia::render('Pendaftaran/Create', [
+            'pesertas' => $pesertas,
             'programPelatihans' => $programPelatihans,
             'kelass' => $kelass,
         ]);
     }
 
     /**
-     * Simpan peserta + pendaftaran + pembayaran.
+     * Simpan pendaftaran dan pembayaran.
+     * Tidak membuat peserta baru.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            /*
-            |--------------------------------------------------------------------------
-            | DATA PESERTA
-            |--------------------------------------------------------------------------
-            */
-
-            'nama' => [
+            'peserta_id' => [
                 'required',
-                'string',
-                'max:255',
+                'integer',
+                'exists:peserta,id',
             ],
-
-            'alamat' => [
-                'nullable',
-                'string',
-            ],
-
-            'kamar' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'lembaga' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | DATA PENDAFTARAN
-            |--------------------------------------------------------------------------
-            */
 
             'program_pelatihan_id' => [
                 'required',
+                'integer',
                 'exists:program_pelatihan,id',
             ],
 
             'kelas_id' => [
                 'required',
+                'integer',
                 'exists:kelas,id',
             ],
 
@@ -115,12 +102,6 @@ class PendaftaranController extends Controller
                 'required',
                 'in:aktif,selesai,batal',
             ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | DATA PEMBAYARAN
-            |--------------------------------------------------------------------------
-            */
 
             'jumlah' => [
                 'required',
@@ -158,20 +139,27 @@ class PendaftaranController extends Controller
         ]);
 
         /*
-        |--------------------------------------------------------------------------
-        | Ambil program
-        |--------------------------------------------------------------------------
-        */
+         * Pastikan peserta masih aktif.
+         */
+        $peserta = Peserta::whereKey($validated['peserta_id'])
+            ->where('is_active', true)
+            ->first();
 
+        if (! $peserta) {
+            return back()
+                ->withErrors([
+                    'peserta_id' =>
+                        'Peserta tidak ditemukan atau akunnya tidak aktif.',
+                ])
+                ->withInput();
+        }
+
+        /*
+         * Pastikan program tersedia dan sedang dibuka.
+         */
         $program = ProgramPelatihan::findOrFail(
             $validated['program_pelatihan_id']
         );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Program harus dibuka
-        |--------------------------------------------------------------------------
-        */
 
         if ($program->status !== 'dibuka') {
             return back()
@@ -183,11 +171,34 @@ class PendaftaranController extends Controller
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Cek kuota program
-        |--------------------------------------------------------------------------
-        */
+         * Cegah peserta mendaftar dua kali pada program
+         * yang sama selama pendaftaran sebelumnya masih aktif.
+         */
+        if ($validated['status'] === 'aktif') {
+            $sudahTerdaftar = Pendaftaran::where(
+                'peserta_id',
+                $validated['peserta_id']
+            )
+                ->where(
+                    'program_pelatihan_id',
+                    $validated['program_pelatihan_id']
+                )
+                ->where('status', 'aktif')
+                ->exists();
 
+            if ($sudahTerdaftar) {
+                return back()
+                    ->withErrors([
+                        'peserta_id' =>
+                            'Peserta sudah memiliki pendaftaran aktif pada program ini.',
+                    ])
+                    ->withInput();
+            }
+        }
+
+        /*
+         * Periksa kuota program.
+         */
         $jumlahAktif = Pendaftaran::where(
             'program_pelatihan_id',
             $program->id
@@ -207,51 +218,24 @@ class PendaftaranController extends Controller
                 ->withInput();
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Simpan semuanya dalam satu transaksi
-        |--------------------------------------------------------------------------
-        */
-
         try {
-
             DB::transaction(function () use ($validated, $request) {
-
                 /*
-                |--------------------------------------------------------------------------
-                | 1. Simpan PESERTA
-                |--------------------------------------------------------------------------
-                */
-
-                $peserta = Peserta::create([
-                    'nama' => $validated['nama'],
-                    'alamat' => $validated['alamat'] ?? null,
-                    'kamar' => $validated['kamar'] ?? null,
-                    'lembaga' => $validated['lembaga'] ?? null,
-                ]);
-
-                /*
-                |--------------------------------------------------------------------------
-                | 2. Simpan PENDAFTARAN
-                |--------------------------------------------------------------------------
-                */
-
+                 * 1. Simpan pendaftaran menggunakan peserta
+                 * yang sudah ada di database.
+                 */
                 $pendaftaran = Pendaftaran::create([
-                    'peserta_id' => $peserta->id,
+                    'peserta_id' => $validated['peserta_id'],
                     'program_pelatihan_id' =>
                         $validated['program_pelatihan_id'],
                     'kelas_id' => $validated['kelas_id'],
-                    'tanggal_daftar' =>
-                        $validated['tanggal_daftar'],
+                    'tanggal_daftar' => $validated['tanggal_daftar'],
                     'status' => $validated['status'],
                 ]);
 
                 /*
-                |--------------------------------------------------------------------------
-                | 3. Upload bukti pembayaran
-                |--------------------------------------------------------------------------
-                */
-
+                 * 2. Upload bukti pembayaran jika tersedia.
+                 */
                 $buktiPath = null;
 
                 if ($request->hasFile('bukti')) {
@@ -260,32 +244,26 @@ class PendaftaranController extends Controller
                 }
 
                 /*
-                |--------------------------------------------------------------------------
-                | 4. Simpan PEMBAYARAN
-                |--------------------------------------------------------------------------
-                */
-
+                 * 3. Simpan pembayaran terkait pendaftaran.
+                 */
                 Pembayaran::create([
                     'pendaftaran_id' => $pendaftaran->id,
                     'jumlah' => $validated['jumlah'],
                     'tanggal_bayar' =>
                         $validated['tanggal_bayar'] ?? null,
-                    'metode' =>
-                        $validated['metode'] ?? null,
-                    'status' =>
-                        $validated['status_pembayaran'],
+                    'metode' => $validated['metode'] ?? null,
+                    'status' => $validated['status_pembayaran'],
                     'bukti' => $buktiPath,
-                    'keterangan' =>
-                        $validated['keterangan'] ?? null,
+                    'keterangan' => $validated['keterangan'] ?? null,
                 ]);
             });
-
         } catch (\Throwable $e) {
+            report($e);
 
             return back()
                 ->withErrors([
                     'pembayaran' =>
-                        'Data gagal disimpan. Silakan coba kembali.',
+                        'Data pendaftaran atau pembayaran gagal disimpan. Periksa kembali data dan konfigurasi database.',
                 ])
                 ->withInput();
         }
@@ -294,7 +272,7 @@ class PendaftaranController extends Controller
             ->route('pendaftarans.index')
             ->with(
                 'success',
-                'Peserta, pendaftaran, dan pembayaran berhasil ditambahkan.'
+                'Pendaftaran dan pembayaran berhasil ditambahkan.'
             );
     }
 
@@ -318,7 +296,7 @@ class PendaftaranController extends Controller
     }
 
     /**
-     * Form edit.
+     * Form edit pendaftaran.
      */
     public function edit(Pendaftaran $pendaftaran)
     {
@@ -328,6 +306,18 @@ class PendaftaranController extends Controller
             'kelas',
             'pembayarans',
         ]);
+
+        $pesertas = Peserta::query()
+            ->where('is_active', true)
+            ->orWhere('id', $pendaftaran->peserta_id)
+            ->orderBy('nama')
+            ->get([
+                'id',
+                'nama',
+                'username',
+                'kamar',
+                'lembaga',
+            ]);
 
         $programPelatihans = ProgramPelatihan::with([
             'pelatihan',
@@ -340,6 +330,7 @@ class PendaftaranController extends Controller
 
         return Inertia::render('Pendaftaran/Edit', [
             'pendaftaran' => $pendaftaran,
+            'pesertas' => $pesertas,
             'programPelatihans' => $programPelatihans,
             'kelass' => $kelass,
         ]);
@@ -355,16 +346,19 @@ class PendaftaranController extends Controller
         $validated = $request->validate([
             'peserta_id' => [
                 'required',
+                'integer',
                 'exists:peserta,id',
             ],
 
             'program_pelatihan_id' => [
                 'required',
+                'integer',
                 'exists:program_pelatihan,id',
             ],
 
             'kelas_id' => [
                 'required',
+                'integer',
                 'exists:kelas,id',
             ],
 
@@ -379,12 +373,35 @@ class PendaftaranController extends Controller
             ],
         ]);
 
+        /*
+         * Pastikan peserta aktif.
+         * Peserta yang sedang diedit boleh tetap dipilih
+         * walaupun akunnya sudah dinonaktifkan.
+         */
+        $pesertaValid = Peserta::whereKey($validated['peserta_id'])
+            ->where(function ($query) use ($pendaftaran) {
+                $query->where('is_active', true)
+                    ->orWhere('id', $pendaftaran->peserta_id);
+            })
+            ->exists();
+
+        if (! $pesertaValid) {
+            return back()
+                ->withErrors([
+                    'peserta_id' =>
+                        'Peserta tidak ditemukan atau akunnya tidak aktif.',
+                ])
+                ->withInput();
+        }
+
         $program = ProgramPelatihan::findOrFail(
             $validated['program_pelatihan_id']
         );
 
+        /*
+         * Cek kuota, tidak menghitung pendaftaran yang sedang diedit.
+         */
         if ($validated['status'] === 'aktif') {
-
             $jumlahAktif = Pendaftaran::where(
                 'program_pelatihan_id',
                 $program->id
@@ -401,27 +418,31 @@ class PendaftaranController extends Controller
                     ])
                     ->withInput();
             }
-        }
 
-        $sudahTerdaftar = Pendaftaran::where(
-            'peserta_id',
-            $validated['peserta_id']
-        )
-            ->where(
-                'program_pelatihan_id',
-                $validated['program_pelatihan_id']
+            /*
+             * Cegah pendaftaran aktif ganda untuk peserta
+             * dan program yang sama.
+             */
+            $sudahTerdaftar = Pendaftaran::where(
+                'peserta_id',
+                $validated['peserta_id']
             )
-            ->where('status', 'aktif')
-            ->where('id', '!=', $pendaftaran->id)
-            ->exists();
+                ->where(
+                    'program_pelatihan_id',
+                    $validated['program_pelatihan_id']
+                )
+                ->where('status', 'aktif')
+                ->where('id', '!=', $pendaftaran->id)
+                ->exists();
 
-        if ($sudahTerdaftar) {
-            return back()
-                ->withErrors([
-                    'peserta_id' =>
-                        'Peserta sudah memiliki pendaftaran aktif pada program ini.',
-                ])
-                ->withInput();
+            if ($sudahTerdaftar) {
+                return back()
+                    ->withErrors([
+                        'peserta_id' =>
+                            'Peserta sudah memiliki pendaftaran aktif pada program ini.',
+                    ])
+                    ->withInput();
+            }
         }
 
         $pendaftaran->update($validated);

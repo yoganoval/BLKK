@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('program_pelatihan_instruktur', function (Blueprint $table) {
             $table->id();
             $table->foreignId('program_pelatihan_id')
-                ->constrained('program_pelatihans')
+                ->constrained('program_pelatihan')
                 ->cascadeOnDelete();
 
             $table->foreignId('instruktur_id')
@@ -24,10 +24,10 @@ return new class extends Migration
             $table->enum('peran', ['utama', 'asisten'])->nullable();
             $table->timestamps();
 
-            $table->unique([
-                'program_pelatihan_id',
-                'instruktur_id'
-            ]);
+            $table->unique(
+                ['program_pelatihan_id', 'instruktur_id'],
+                'pp_instruktur_unique'
+            );
         });
     }
 

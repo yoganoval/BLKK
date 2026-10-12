@@ -1,42 +1,34 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Pembayaran extends Model
 {
-    public function up(): void
+    protected $table = 'pembayaran';
+
+    protected $fillable = [
+        'pendaftaran_id',
+        'jumlah',
+        'tanggal_bayar',
+        'metode',
+        'status',
+        'bukti',
+        'keterangan',
+    ];
+
+    protected function casts(): array
     {
-        Schema::create('sertifikat', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('peserta_id')
-                ->constrained('peserta')
-                ->cascadeOnDelete();
-
-            $table->foreignId('pelatihan_id')
-                ->constrained('pelatihan')
-                ->cascadeOnDelete();
-
-            $table->foreignId('kelas_id')
-                ->nullable()
-                ->constrained('kelas')
-                ->nullOnDelete();
-
-            $table->string('nomor_sertifikat')->unique();
-            $table->string('judul_sertifikat');
-            $table->date('tanggal_terbit');
-            $table->string('file_sertifikat')->nullable();
-            $table->string('status')->default('aktif');
-            $table->text('keterangan')->nullable();
-
-            $table->timestamps();
-        });
+        return [
+            'jumlah' => 'decimal:2',
+            'tanggal_bayar' => 'date',
+        ];
     }
 
-    public function down(): void
+    public function pendaftaran(): BelongsTo
     {
-        Schema::dropIfExists('sertifikat');
+        return $this->belongsTo(Pendaftaran::class);
     }
-};
+}
