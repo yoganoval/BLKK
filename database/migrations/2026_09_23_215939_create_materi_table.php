@@ -19,16 +19,9 @@ return new class extends Migration
                 ->constrained('kelas')
                 ->cascadeOnDelete();
 
-            // $table->foreignId('tahap_id')
-            //     ->nullable()
-            //     ->constrained('tahap')
-            //     ->nullOnDelete();
-
             $table->string('judul');
             $table->text('deskripsi')->nullable();
             $table->longText('isi_materi')->nullable();
-
-            $table->unsignedInteger('urutan')->default(1);
 
             $table->enum('status', [
                 'draft',
@@ -42,7 +35,7 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->index(['kelas_id', 'urutan']);
+            $table->index(['kelas_id', 'program_pelatihan_id', 'status']);
         });
     }
 

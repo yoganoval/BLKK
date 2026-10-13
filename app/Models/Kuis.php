@@ -11,9 +11,8 @@ class Kuis extends Model
     protected $table = 'kuis';
 
     protected $fillable = [
-        'pelatihan_id',
+        'program_pelatihan_id',
         'kelas_id',
-        'tahap_id',
         'materi_id',
         'judul',
         'deskripsi',
@@ -33,9 +32,9 @@ class Kuis extends Model
         ];
     }
 
-    public function pelatihan(): BelongsTo
+    public function programPelatihan(): BelongsTo
     {
-        return $this->belongsTo(Pelatihan::class);
+        return $this->belongsTo(ProgramPelatihan::class);
     }
 
     public function kelas(): BelongsTo
@@ -43,23 +42,29 @@ class Kuis extends Model
         return $this->belongsTo(Kelas::class);
     }
 
-    public function tahap(): BelongsTo
-    {
-        return $this->belongsTo(Tahap::class);
-    }
-
     public function materi(): BelongsTo
     {
         return $this->belongsTo(Materi::class);
     }
 
-    public function creator(): BelongsTo
+    public function pembuat(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function pertanyaan(): HasMany
+    public function soal(): HasMany
     {
-        return $this->hasMany(PertanyaanKuis::class, 'kuis_id');
+        return $this->hasMany(Soal::class, 'kuis_id')
+            ->orderBy('urutan');
+    }
+
+    public function percobaanKuis(): HasMany
+    {
+        return $this->hasMany(PercobaanKuis::class, 'kuis_id');
+    }
+
+    public function jawabanKuis(): HasMany
+    {
+        return $this->hasMany(JawabanKuis::class, 'kuis_id');
     }
 }

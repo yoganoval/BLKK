@@ -20,7 +20,6 @@ return new class extends Migration
             $table->enum('tipe', [
                 'pilihan_ganda',
                 'benar_salah',
-                'essay'
             ])->default('pilihan_ganda');
 
             $table->decimal('bobot', 5, 2)

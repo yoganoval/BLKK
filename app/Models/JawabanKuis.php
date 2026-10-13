@@ -13,8 +13,8 @@ class JawabanKuis extends Model
         'kuis_id',
         'soal_id',
         'peserta_id',
+        'percobaan_kuis_id',
         'opsi_jawaban_id',
-        'jawaban_text',
         'benar',
         'nilai',
         'answered_at',
@@ -42,6 +42,14 @@ class JawabanKuis extends Model
     public function peserta(): BelongsTo
     {
         return $this->belongsTo(Peserta::class, 'peserta_id');
+    }
+
+    public function percobaanKuis(): BelongsTo
+    {
+        return $this->belongsTo(
+            PercobaanKuis::class,
+            'percobaan_kuis_id'
+        );
     }
 
     public function opsiJawaban(): BelongsTo

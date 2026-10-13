@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -33,7 +34,8 @@ class Soal extends Model
 
     public function opsiJawaban(): HasMany
     {
-        return $this->hasMany(OpsiJawaban::class, 'soal_id');
+        return $this->hasMany(OpsiJawaban::class, 'soal_id')
+            ->orderBy('urutan');
     }
 
     public function jawabanKuis(): HasMany

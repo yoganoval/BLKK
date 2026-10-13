@@ -11,18 +11,13 @@ return new class extends Migration
         Schema::create('kuis', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('pelatihan_id')
-                ->constrained('pelatihan')
+             $table->foreignId('program_pelatihan_id')
+                ->constrained('program_pelatihan')
                 ->cascadeOnDelete();
 
             $table->foreignId('kelas_id')
                 ->constrained('kelas')
                 ->cascadeOnDelete();
-
-            $table->foreignId('tahap_id')
-                ->nullable()
-                ->constrained('tahap')
-                ->nullOnDelete();
 
             $table->foreignId('materi_id')
                 ->nullable()

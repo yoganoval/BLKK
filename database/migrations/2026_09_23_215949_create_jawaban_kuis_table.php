@@ -28,8 +28,6 @@ return new class extends Migration
                 ->constrained('opsi_jawaban')
                 ->nullOnDelete();
 
-            $table->longText('jawaban_text')->nullable();
-
             $table->boolean('benar')
                 ->nullable();
 

@@ -15,6 +15,14 @@ return new class extends Migration
                 ->constrained('peserta')
                 ->cascadeOnDelete();
 
+             $table->foreignId('program_pelatihan_id')
+                ->constrained('program_pelatihan')
+                ->cascadeOnDelete();
+
+            $table->foreignId('kelas_id')
+                ->constrained('kelas')
+                ->cascadeOnDelete();
+
             $table->foreignId('komponen_nilai_id')
                 ->constrained('komponen_nilai')
                 ->cascadeOnDelete();
