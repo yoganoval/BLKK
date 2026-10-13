@@ -17,18 +17,25 @@ interface Peserta {
     nama: string
 }
 
+
 interface Pengumpulan {
     id: number
-    tugas_id: number
-    peserta_id: number
-    nama_file?: string
-    file_path?: string
-    tanggal_kumpul?: string
-    nilai?: number
+    jawaban: string | null
+    file_path: string | null
+    dikumpulkan_at: string | null
+    nilai: number | string | null
+    feedback: string | null
     status: string
-    tugas?: Tugas
-    peserta?: Peserta
+    tugas?: {
+        id: number
+        judul: string
+    } | null
+    peserta?: {
+        id: number
+        nama: string
+    } | null
 }
+
 
 interface PaginationLink {
     url: string | null

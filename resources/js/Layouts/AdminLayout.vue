@@ -229,6 +229,13 @@ const menus = [
                 permission: '',
                 icon: 'users',
             },
+
+            {
+                label: 'Pengaturan Rekap Nilai',
+                url: '/pengaturan-rekap-nilai',
+                permission: 'pengaturan-rekap-nilai.index',
+                icon: 'users',
+            },
         ],
     },
 

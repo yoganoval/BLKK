@@ -46,4 +46,12 @@ class Kelas extends Model
             'jadwal_id'
         )->withTimestamps();
     }
+    public function materis(): BelongsToMany 
+    { return $this->belongsToMany( 
+        Materi::class, 
+        'kelas_materi', 
+        'kelas_id', 
+        'materi_id' 
+        )->withTimestamps(); 
+    }
 }

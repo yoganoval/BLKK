@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Materi extends Model
@@ -14,9 +15,8 @@ class Materi extends Model
     protected $table = 'materi';
 
     protected $fillable = [
-        'pelatihan_id',
+        'program_pelatihan_id',
         'kelas_id',
-        'tahap_id',
         'judul',
         'deskripsi',
         'isi_materi',
@@ -32,19 +32,22 @@ class Materi extends Model
         ];
     }
 
-    public function pelatihan(): BelongsTo
+    public function programPelatihan(): BelongsTo
     {
-        return $this->belongsTo(Pelatihan::class, 'pelatihan_id');
+        return $this->belongsTo(
+            ProgramPelatihan::class,
+            'program_pelatihan_id'
+        );
     }
 
-    public function kelas(): BelongsTo
+    public function kelas(): BelongsToMany
     {
-        return $this->belongsTo(Kelas::class, 'kelas_id');
-    }
-
-    public function tahap(): BelongsTo
-    {
-        return $this->belongsTo(Tahap::class, 'tahap_id');
+        return $this->belongsToMany(
+            Kelas::class,
+            'kelas_materi',
+            'materi_id',
+            'kelas_id'
+        )->withTimestamps();
     }
 
     public function pembuat(): BelongsTo

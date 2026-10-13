@@ -4,71 +4,105 @@ namespace App\Http\Controllers;
 
 use App\Models\Kelas;
 use App\Models\Materi;
-use App\Models\Pelatihan;
+use App\Models\MateriFile;
+use App\Models\ProgramPelatihan;
 use App\Models\Tahap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Storage;
 
 class MateriController extends Controller
 {
     /**
-     * Menampilkan daftar materi.
+     * Menampilkan daftar materi, pencarian, dan filter.
      */
     public function index(Request $request): Response
     {
-        $query = Materi::with([
-            'pelatihan',
-            'kelas',
-            'tahap',
-            'creator',
-            'files',
-        ]);
+        $search = trim($request->input('search', ''));
 
-        if ($request->filled('search')) {
-            $query->where('judul', 'like', '%' . $request->search . '%');
-        }
+        $materis = Materi::query()
+            ->with([
+                'programPelatihan.pelatihan',
+                'programPelatihan.tahap',
+                'kelas',
+                'creator',
+                'files',
+            ])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where('judul', 'like', "%{$search}%");
+            })
+            ->when(
+                $request->filled('program_pelatihan_id'),
+                function ($query) use ($request) {
+                    $query->where(
+                        'program_pelatihan_id',
+                        $request->input('program_pelatihan_id')
+                    );
+                }
+            )
+            ->when(
+                $request->filled('kelas_id'),
+                function ($query) use ($request) {
+                    $kelasId = $request->input('kelas_id');
 
-        if ($request->filled('pelatihan_id')) {
-            $query->where('pelatihan_id', $request->pelatihan_id);
-        }
+                    $query->whereHas('kelas', function ($kelasQuery) use ($kelasId) {
+                        $kelasQuery->where('kelas.id', $kelasId);
+                    });
+                }
+            )
+            ->when(
+                $request->filled('tahap_id'),
+                function ($query) use ($request) {
+                    $tahapId = $request->input('tahap_id');
 
-        if ($request->filled('kelas_id')) {
-            $query->where('kelas_id', $request->kelas_id);
-        }
-
-        if ($request->filled('tahap_id')) {
-            $query->where('tahap_id', $request->tahap_id);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $materis = $query
-            ->orderBy('urutan')
-            ->orderByDesc('created_at')
+                    $query->whereHas(
+                        'programPelatihan',
+                        function ($programQuery) use ($tahapId) {
+                            $programQuery->where('tahap_id', $tahapId);
+                        }
+                    );
+                }
+            )
+            ->when(
+                $request->filled('status'),
+                function ($query) use ($request) {
+                    $query->where('status', $request->input('status'));
+                }
+            )
+            ->latest()
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('Materi/Index', [
+        return Inertia::render('Admin/Materi/Index', [
             'materis' => $materis,
-
-            'filters' => [
-                'search' => $request->search,
-                'pelatihan_id' => $request->pelatihan_id,
-                'kelas_id' => $request->kelas_id,
-                'tahap_id' => $request->tahap_id,
-                'status' => $request->status,
-            ],
-
-            'pelatihans' => Pelatihan::orderBy('nama')->get(),
-
-            'kelas' => Kelas::orderBy('nama')->get(),
-
-            'tahaps' => Tahap::orderBy('nama')->get(),
+            'filters' => $request->only([
+                'search',
+                'program_pelatihan_id',
+                'kelas_id',
+                'tahap_id',
+                'status',
+            ]),
+            'programPelatihans' => ProgramPelatihan::with([
+                'pelatihan:id,nama',
+                'tahap:id,nama',
+            ])->orderBy('nama')->get([
+                'id',
+                'nama',
+                'pelatihan_id',
+                'tahap_id',
+            ]),
+            'kelass' => Kelas::orderBy('nama')->get([
+                'id',
+                'nama',
+                'durasi_hari',
+            ]),
+            'tahaps' => Tahap::orderBy('nama')->get([
+                'id',
+                'nama',
+            ]),
         ]);
     }
 
@@ -77,49 +111,48 @@ class MateriController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Materi/Create', [
-            'pelatihans' => Pelatihan::query()
-                ->orderBy('nama')
-                ->get([
-                    'id',
-                    'nama',
-                ]),
+        return Inertia::render('Admin/Materi/Create', [
+            'programPelatihans' => ProgramPelatihan::with([
+                'pelatihan:id,nama',
+                'tahap:id,nama',
+            ])->orderBy('nama')->get([
+                'id',
+                'nama',
+                'pelatihan_id',
+                'tahap_id',
+            ]),
 
-            'kelas' => Kelas::query()
-                ->orderBy('nama')
-                ->get([
-                    'id',
-                    'nama',
-                ]),
-
-            'tahaps' => Tahap::query()
-                ->orderBy('nama')
-                ->get([
-                    'id',
-                    'nama',
-                ]),
+            'kelass' => Kelas::orderBy('nama')->get([
+                'id',
+                'nama',
+                'durasi_hari',
+            ]),
         ]);
     }
 
     /**
-     * Menyimpan materi baru.
+     * Menyimpan materi beserta kelas-kelas yang dipilih.
      */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'pelatihan_id' => [
+            'program_pelatihan_id' => [
                 'required',
-                'exists:pelatihan,id',
+                'integer',
+                'exists:program_pelatihan,id',
             ],
 
-            'kelas_id' => [
+            'kelas_ids' => [
                 'required',
+                'array',
+                'min:1',
+            ],
+
+            'kelas_ids.*' => [
+                'required',
+                'integer',
+                'distinct',
                 'exists:kelas,id',
-            ],
-
-            'tahap_id' => [
-                'nullable',
-                'exists:tahap,id',
             ],
 
             'judul' => [
@@ -150,9 +183,27 @@ class MateriController extends Controller
             ],
         ]);
 
-        $validated['created_by'] = auth()->id();
+        DB::transaction(function () use ($validated) {
+            $kelasIds = $validated['kelas_ids'];
 
-        Materi::create($validated);
+            $materi = Materi::create([
+                'program_pelatihan_id' => $validated['program_pelatihan_id'],
+
+                // Menjaga kolom kelas_id lama tetap terisi
+                // jika kolom tersebut masih wajib di database.
+                'kelas_id' => $kelasIds[0],
+
+                'judul' => $validated['judul'],
+                'deskripsi' => $validated['deskripsi'] ?? null,
+                'isi_materi' => $validated['isi_materi'] ?? null,
+                'urutan' => $validated['urutan'],
+                'status' => $validated['status'],
+                'created_by' => auth()->id(),
+            ]);
+
+            // Simpan seluruh kelas yang dicentang ke tabel kelas_materi.
+            $materi->kelas()->sync($kelasIds);
+        });
 
         return redirect()
             ->route('materi.index')
@@ -160,21 +211,19 @@ class MateriController extends Controller
     }
 
     /**
-     * Menampilkan detail materi.
+     * Detail materi.
      */
     public function show(Materi $materi): Response
     {
         $materi->load([
-            'pelatihan:id,nama',
-            'kelas:id,nama',
-            'tahap:id,nama',
-            'creator:id,name',
+            'programPelatihan.pelatihan',
+            'programPelatihan.tahap',
+            'kelas',
+            'creator',
             'files',
-            'tugas',
-            'kuis.soal.opsiJawaban',
         ]);
 
-        return Inertia::render('Materi/Show', [
+        return Inertia::render('Admin/Materi/Show', [
             'materi' => $materi,
         ]);
     }
@@ -184,55 +233,57 @@ class MateriController extends Controller
      */
     public function edit(Materi $materi): Response
     {
-        $materi->load('files');
+        $materi->load([
+            'programPelatihan.pelatihan',
+            'programPelatihan.tahap',
+            'kelas',
+            'files',
+        ]);
 
-        return Inertia::render('Materi/Edit', [
+        return Inertia::render('Admin/Materi/Edit', [
             'materi' => $materi,
 
-            'pelatihans' => Pelatihan::query()
-                ->orderBy('nama')
-                ->get([
-                    'id',
-                    'nama',
-                ]),
+            'programPelatihans' => ProgramPelatihan::with([
+                'pelatihan:id,nama',
+                'tahap:id,nama',
+            ])->orderBy('nama')->get([
+                'id',
+                'nama',
+                'pelatihan_id',
+                'tahap_id',
+            ]),
 
-            'kelas' => Kelas::query()
-                ->orderBy('nama')
-                ->get([
-                    'id',
-                    'nama',
-                ]),
-
-            'tahaps' => Tahap::query()
-                ->orderBy('nama')
-                ->get([
-                    'id',
-                    'nama',
-                ]),
+            'kelass' => Kelas::orderBy('nama')->get([
+                'id',
+                'nama',
+                'durasi_hari',
+            ]),
         ]);
     }
 
     /**
-     * Update materi.
+     * Memperbarui materi dan kelas-kelas yang dipilih.
      */
-    public function update(
-        Request $request,
-        Materi $materi
-    ): RedirectResponse {
+    public function update(Request $request, Materi $materi): RedirectResponse
+    {
         $validated = $request->validate([
-            'pelatihan_id' => [
+            'program_pelatihan_id' => [
                 'required',
-                'exists:pelatihan,id',
+                'integer',
+                'exists:program_pelatihan,id',
             ],
 
-            'kelas_id' => [
+            'kelas_ids' => [
                 'required',
+                'array',
+                'min:1',
+            ],
+
+            'kelas_ids.*' => [
+                'required',
+                'integer',
+                'distinct',
                 'exists:kelas,id',
-            ],
-
-            'tahap_id' => [
-                'nullable',
-                'exists:tahap,id',
             ],
 
             'judul' => [
@@ -263,7 +314,23 @@ class MateriController extends Controller
             ],
         ]);
 
-        $materi->update($validated);
+        DB::transaction(function () use ($validated, $materi) {
+            $kelasIds = $validated['kelas_ids'];
+
+            $materi->update([
+                'program_pelatihan_id' => $validated['program_pelatihan_id'],
+                'kelas_id' => $kelasIds[0],
+                'judul' => $validated['judul'],
+                'deskripsi' => $validated['deskripsi'] ?? null,
+                'isi_materi' => $validated['isi_materi'] ?? null,
+                'urutan' => $validated['urutan'],
+                'status' => $validated['status'],
+            ]);
+
+            // Menyamakan kelas pivot dengan pilihan terbaru.
+            // Kelas yang tidak dicentang akan dilepas.
+            $materi->kelas()->sync($kelasIds);
+        });
 
         return redirect()
             ->route('materi.index')
@@ -271,21 +338,27 @@ class MateriController extends Controller
     }
 
     /**
-     * Hapus materi.
+     * Menghapus materi beserta file dan relasi kelasnya.
      */
-
     public function destroy(Materi $materi): RedirectResponse
     {
-        foreach ($materi->files as $file) {
-            if (
-                $file->file_path &&
-                Storage::disk('public')->exists($file->file_path)
-            ) {
-                Storage::disk('public')->delete($file->file_path);
+        DB::transaction(function () use ($materi) {
+            // Hapus file fisik dari storage, jika ada.
+            foreach ($materi->files as $file) {
+                if (!empty($file->path)) {
+                    Storage::disk('public')->delete($file->path);
+                }
             }
-        }
 
-        $materi->delete();
+            // Hapus data file dari database.
+            $materi->files()->delete();
+
+            // Lepaskan seluruh relasi kelas.
+            $materi->kelas()->detach();
+
+            // Hapus materi.
+            $materi->delete();
+        });
 
         return redirect()
             ->route('materi.index')

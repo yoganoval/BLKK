@@ -1,62 +1,103 @@
 
-<script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import AdminLayout from '@/Layouts/AdminLayout.vue';
+<script setup>
+import { computed } from 'vue'
+import { Head, Link, useForm } from '@inertiajs/vue3'
+import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({
     layout: AdminLayout,
-});
+})
 
-interface Pelatihan {
-    id: number;
-    nama: string;
-}
-
-interface Kelas {
-    id: number;
-    nama: string;
-}
-
-interface Tahap {
-    id: number;
-    nama: string;
-}
-
-interface Props {
-    pelatihans: Pelatihan[];
-    kelas: Kelas[];
-    tahaps: Tahap[];
-}
-
-const props = defineProps<Props>();
+const props = defineProps({
+    programPelatihans: {
+        type: Array,
+        default: () => [],
+    },
+    kelass: {
+        type: Array,
+        default: () => [],
+    },
+})
 
 const form = useForm({
-    pelatihan_id: '',
-    kelas_id: '',
-    tahap_id: '',
+    program_pelatihan_id: '',
+    kelas_ids: [],
     judul: '',
     deskripsi: '',
     isi_materi: '',
     urutan: 1,
-    status: 'draft' as 'draft' | 'published',
-});
+    status: 'draft',
+})
+
+const programTerpilih = computed(() => {
+    return props.programPelatihans.find(
+        program =>
+            Number(program.id) === Number(form.program_pelatihan_id)
+    )
+})
+
+const jumlahKelasDipilih = computed(() => form.kelas_ids.length)
+
+const semuaKelasDipilih = computed(() => {
+    return props.kelass.length > 0 &&
+        props.kelass.every(kelas =>
+            form.kelas_ids.includes(Number(kelas.id))
+        )
+})
+
+function toggleSemuaKelas() {
+    if (semuaKelasDipilih.value) {
+        form.kelas_ids = []
+    } else {
+        form.kelas_ids = props.kelass.map(kelas => Number(kelas.id))
+    }
+}
 
 function submit() {
-    form.post(route('materi.store'));
+    form.post(route('materi.store'), {
+        preserveScroll: true,
+    })
 }
 </script>
 
 <template>
     <Head title="Tambah Materi" />
 
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-950">
-        <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-slate-50 px-4 py-6 dark:bg-slate-950 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-4xl">
 
             <!-- HEADER -->
-            <div class="mb-6 flex items-center gap-3">
+            <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                        <svg
+                            class="h-6 w-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 4v16m8-8H4"
+                            />
+                        </svg>
+                    </div>
+
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                            Tambah Materi
+                        </h1>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">
+                            Tambahkan materi untuk program dan beberapa kelas.
+                        </p>
+                    </div>
+                </div>
+
                 <Link
                     :href="route('materi.index')"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+                    class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                     <svg
                         class="h-5 w-5"
@@ -68,384 +109,301 @@ function submit() {
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M15 19l-7-7 7-7"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
                         />
                     </svg>
+                    Kembali
                 </Link>
-
-                <div>
-                    <h1
-                        class="text-xl font-bold text-slate-800 dark:text-white"
-                    >
-                        Tambah Materi
-                    </h1>
-
-                    <p class="text-sm text-slate-500 dark:text-slate-400">
-                        Tambahkan materi pembelajaran baru
-                    </p>
-                </div>
             </div>
 
-            <form @submit.prevent="submit" class="space-y-6">
+            <form @submit.prevent="submit">
 
-                <!-- INFORMASI MATERI -->
-                <div
-                    class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                >
-                    <h2
-                        class="mb-5 font-semibold text-slate-800 dark:text-white"
+                <!-- PROGRAM PELATIHAN -->
+                <section class="mb-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div class="mb-5">
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white">
+                            Program Pelatihan
+                        </h2>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Pilih program beserta tahap yang sesuai.
+                        </p>
+                    </div>
+
+                    <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Program Pelatihan
+                        <span class="text-red-500">*</span>
+                    </label>
+
+                    <select
+                        v-model="form.program_pelatihan_id"
+                        required
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     >
-                        Informasi Materi
-                    </h2>
+                        <option value="">
+                            Pilih program pelatihan
+                        </option>
 
-                    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        <option
+                            v-for="program in programPelatihans"
+                            :key="program.id"
+                            :value="program.id"
+                        >
+                            {{ program.nama }}
+                            — {{ program.pelatihan?.nama ?? '-' }}
+                            — {{ program.tahap?.nama ?? 'Tanpa tahap' }}
+                        </option>
+                    </select>
 
-                        <!-- PELATIHAN -->
-                        <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Pelatihan
-                            </label>
+                    <p
+                        v-if="form.errors.program_pelatihan_id"
+                        class="mt-2 text-sm text-red-600"
+                    >
+                        {{ form.errors.program_pelatihan_id }}
+                    </p>
 
-                            <select
-                                v-model="form.pelatihan_id"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                            >
-                                <option value="">
-                                    Pilih Pelatihan
-                                </option>
+                    <div
+                        v-if="programTerpilih"
+                        class="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/40"
+                    >
+                        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+                            Program terpilih
+                        </p>
 
-                                <option
-                                    v-for="item in props.pelatihans"
-                                    :key="item.id"
-                                    :value="item.id"
-                                >
-                                    {{ item.nama }}
-                                </option>
-                            </select>
+                        <p class="mt-1 font-semibold text-slate-900 dark:text-white">
+                            {{ programTerpilih.nama }}
+                        </p>
 
-                            <p
-                                v-if="form.errors.pelatihan_id"
-                                class="mt-1 text-xs text-red-500"
-                            >
-                                {{ form.errors.pelatihan_id }}
-                            </p>
-                        </div>
+                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            Pelatihan:
+                            {{ programTerpilih.pelatihan?.nama ?? '-' }}
+                        </p>
 
-                        <!-- KELAS -->
-                        <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Kelas
-                            </label>
+                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            Tahap:
+                            {{ programTerpilih.tahap?.nama ?? 'Belum ditentukan' }}
+                        </p>
+                    </div>
+                </section>
 
-                            <select
-                                v-model="form.kelas_id"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                            >
-                                <option value="">
-                                    Pilih Kelas
-                                </option>
+                <!-- PILIH KELAS -->
+                <section class="mb-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div class="mb-5">
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white">
+                            Kelas Penerima Materi
+                        </h2>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Centang semua kelas yang boleh mengakses materi ini.
+                        </p>
+                    </div>
 
-                                <option
-                                    v-for="item in props.kelas"
-                                    :key="item.id"
-                                    :value="item.id"
-                                >
-                                    {{ item.nama }}
-                                </option>
-                            </select>
-
-                            <p
-                                v-if="form.errors.kelas_id"
-                                class="mt-1 text-xs text-red-500"
-                            >
-                                {{ form.errors.kelas_id }}
-                            </p>
-                        </div>
-
-                        <!-- TAHAP -->
-                        <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Tahap
-                            </label>
-
-                            <select
-                                v-model="form.tahap_id"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                            >
-                                <option value="">
-                                    Tanpa Tahap
-                                </option>
-
-                                <option
-                                    v-for="item in props.tahaps"
-                                    :key="item.id"
-                                    :value="item.id"
-                                >
-                                    {{ item.nama }}
-                                </option>
-                            </select>
-
-                            <p
-                                v-if="form.errors.tahap_id"
-                                class="mt-1 text-xs text-red-500"
-                            >
-                                {{ form.errors.tahap_id }}
-                            </p>
-                        </div>
-
-                        <!-- URUTAN -->
-                        <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Urutan
-                            </label>
-
+                    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800">
+                        <label class="flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
                             <input
-                                v-model.number="form.urutan"
-                                type="number"
-                                min="1"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                type="checkbox"
+                                :checked="semuaKelasDipilih"
+                                :disabled="kelass.length === 0"
+                                class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                @change="toggleSemuaKelas"
+                            />
+                            Pilih semua kelas
+                        </label>
+
+                        <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                            {{ jumlahKelasDipilih }} kelas dipilih
+                        </span>
+                    </div>
+
+                    <div
+                        v-if="kelass.length > 0"
+                        class="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                    >
+                        <label
+                            v-for="kelas in kelass"
+                            :key="kelas.id"
+                            class="flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition"
+                            :class="form.kelas_ids.includes(Number(kelas.id))
+                                ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'
+                                : 'border-slate-200 hover:border-indigo-300 dark:border-slate-700 dark:hover:border-indigo-700'"
+                        >
+                            <input
+                                v-model="form.kelas_ids"
+                                type="checkbox"
+                                :value="Number(kelas.id)"
+                                class="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                             />
 
-                            <p
-                                v-if="form.errors.urutan"
-                                class="mt-1 text-xs text-red-500"
-                            >
-                                {{ form.errors.urutan }}
-                            </p>
-                        </div>
-
+                            <div class="min-w-0 flex-1">
+                                <p class="font-semibold text-slate-900 dark:text-white">
+                                    {{ kelas.nama }}
+                                </p>
+                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Durasi {{ kelas.durasi_hari }} hari
+                                </p>
+                            </div>
+                        </label>
                     </div>
-                </div>
 
-                <!-- ISI MATERI -->
-                <div
-                    class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                >
-                    <h2
-                        class="mb-5 font-semibold text-slate-800 dark:text-white"
+                    <div
+                        v-else
+                        class="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700"
                     >
-                        Isi Materi
-                    </h2>
+                        Belum ada data kelas.
+                    </div>
+
+                    <p
+                        v-if="form.errors.kelas_ids"
+                        class="mt-3 text-sm text-red-600"
+                    >
+                        {{ form.errors.kelas_ids }}
+                    </p>
+
+                    <p
+                        v-for="(error, index) in Object.keys(form.errors)
+                            .filter(key => key.startsWith('kelas_ids.'))
+                            .map(key => form.errors[key])"
+                        :key="index"
+                        class="mt-2 text-sm text-red-600"
+                    >
+                        {{ error }}
+                    </p>
+                </section>
+
+                <!-- DETAIL MATERI -->
+                <section class="mb-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div class="mb-5">
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white">
+                            Detail Materi
+                        </h2>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Lengkapi informasi materi.
+                        </p>
+                    </div>
 
                     <div class="space-y-5">
-
-                        <!-- JUDUL -->
                         <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
+                            <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                                 Judul Materi
+                                <span class="text-red-500">*</span>
                             </label>
 
                             <input
                                 v-model="form.judul"
                                 type="text"
-                                placeholder="Contoh: Pengenalan Microsoft Word"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                required
+                                maxlength="255"
+                                placeholder="Contoh: Pengenalan HTML"
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                             />
 
-                            <p
-                                v-if="form.errors.judul"
-                                class="mt-1 text-xs text-red-500"
-                            >
+                            <p v-if="form.errors.judul" class="mt-2 text-sm text-red-600">
                                 {{ form.errors.judul }}
                             </p>
                         </div>
 
-                        <!-- DESKRIPSI -->
                         <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
+                            <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                                 Deskripsi
                             </label>
 
                             <textarea
                                 v-model="form.deskripsi"
                                 rows="3"
-                                placeholder="Masukkan deskripsi singkat materi..."
-                                class="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                placeholder="Penjelasan singkat materi..."
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                             ></textarea>
 
-                            <p
-                                v-if="form.errors.deskripsi"
-                                class="mt-1 text-xs text-red-500"
-                            >
+                            <p v-if="form.errors.deskripsi" class="mt-2 text-sm text-red-600">
                                 {{ form.errors.deskripsi }}
                             </p>
                         </div>
 
-                        <!-- ISI MATERI -->
                         <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
+                            <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                                 Isi Materi
                             </label>
 
                             <textarea
                                 v-model="form.isi_materi"
-                                rows="12"
-                                placeholder="Tuliskan isi materi pembelajaran di sini..."
-                                class="w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                rows="8"
+                                placeholder="Tuliskan isi materi di sini..."
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                             ></textarea>
 
-                            <p
-                                v-if="form.errors.isi_materi"
-                                class="mt-1 text-xs text-red-500"
-                            >
+                            <p v-if="form.errors.isi_materi" class="mt-2 text-sm text-red-600">
                                 {{ form.errors.isi_materi }}
                             </p>
                         </div>
 
-                    </div>
-                </div>
+                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    Urutan
+                                    <span class="text-red-500">*</span>
+                                </label>
 
-                <!-- STATUS -->
-                <div
-                    class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                >
-                    <h2
-                        class="mb-4 font-semibold text-slate-800 dark:text-white"
-                    >
-                        Status
-                    </h2>
-
-                    <div class="flex gap-3">
-
-                        <!-- DRAFT -->
-                        <label
-                            class="cursor-pointer rounded-xl border px-5 py-3"
-                            :class="
-                                form.status === 'draft'
-                                    ? 'border-amber-400 bg-amber-50 dark:border-amber-500 dark:bg-amber-500/10'
-                                    : 'border-slate-200 dark:border-slate-700'
-                            "
-                        >
-                            <input
-                                v-model="form.status"
-                                type="radio"
-                                value="draft"
-                                class="sr-only"
-                            />
-
-                            <span
-                                class="text-sm font-semibold text-slate-700 dark:text-slate-200"
-                            >
-                                Draft
-                            </span>
-                        </label>
-
-                        <!-- PUBLISHED -->
-                        <label
-                            class="cursor-pointer rounded-xl border px-5 py-3"
-                            :class="
-                                form.status === 'published'
-                                    ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-500/10'
-                                    : 'border-slate-200 dark:border-slate-700'
-                            "
-                        >
-                            <input
-                                v-model="form.status"
-                                type="radio"
-                                value="published"
-                                class="sr-only"
-                            />
-
-                            <span
-                                class="text-sm font-semibold text-slate-700 dark:text-slate-200"
-                            >
-                                Published
-                            </span>
-                        </label>
-
-                    </div>
-
-                    <p
-                        v-if="form.errors.status"
-                        class="mt-2 text-xs text-red-500"
-                    >
-                        {{ form.errors.status }}
-                    </p>
-                </div>
-
-                <!-- INFORMASI UPLOAD -->
-                <div
-                    class="rounded-2xl border border-indigo-100 bg-indigo-50 p-6 dark:border-indigo-900/50 dark:bg-indigo-500/10"
-                >
-                    <div class="flex gap-3">
-
-                        <div
-                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400"
-                        >
-                            <svg
-                                class="h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M13 16h-1v-4h-1m1-4h.01M12 21a9 9 0 100-18 9 9 0 000 18z"
+                                <input
+                                    v-model.number="form.urutan"
+                                    type="number"
+                                    min="1"
+                                    required
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
-                            </svg>
+
+                                <p v-if="form.errors.urutan" class="mt-2 text-sm text-red-600">
+                                    {{ form.errors.urutan }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    Status
+                                    <span class="text-red-500">*</span>
+                                </label>
+
+                                <select
+                                    v-model="form.status"
+                                    required
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                >
+                                    <option value="draft">Draft</option>
+                                    <option value="published">Published</option>
+                                </select>
+
+                                <p v-if="form.errors.status" class="mt-2 text-sm text-red-600">
+                                    {{ form.errors.status }}
+                                </p>
+                            </div>
                         </div>
-
-                        <div>
-                            <h2
-                                class="font-semibold text-indigo-900 dark:text-indigo-300"
-                            >
-                                File Materi
-                            </h2>
-
-                            <p
-                                class="mt-1 text-sm leading-6 text-indigo-700 dark:text-indigo-400"
-                            >
-                                File materi dapat diupload setelah materi
-                                berhasil dibuat. Setelah menyimpan materi,
-                                Anda akan diarahkan ke halaman edit untuk
-                                mengunggah file PDF, Word, PowerPoint, Excel,
-                                gambar, video, ZIP, atau RAR.
-                            </p>
-                        </div>
-
                     </div>
-                </div>
+                </section>
 
-                <!-- ACTION -->
-                <div class="flex justify-end gap-3">
-
+                <!-- TOMBOL -->
+                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <Link
                         :href="route('materi.index')"
-                        class="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         Batal
                     </Link>
 
                     <button
                         type="submit"
-                        :disabled="form.processing"
-                        class="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                        :disabled="form.processing || kelass.length === 0"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        {{
-                            form.processing
-                                ? 'Menyimpan...'
-                                : 'Simpan Materi'
-                        }}
+                        <svg
+                            v-if="form.processing"
+                            class="h-5 w-5 animate-spin"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+
+                        {{ form.processing ? 'Menyimpan...' : 'Simpan Materi' }}
                     </button>
-
                 </div>
-
             </form>
         </div>
     </div>

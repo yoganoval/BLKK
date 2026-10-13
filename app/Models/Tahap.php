@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,4 +27,10 @@ class Tahap extends Model
             'id'
         );
     }
+
+    public function tahap(): BelongsTo
+    {
+        return $this->belongsTo(Tahap::class, 'tahap_id');
+    }
+
 }

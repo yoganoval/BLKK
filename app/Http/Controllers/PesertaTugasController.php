@@ -2,233 +2,192 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
 use App\Models\Peserta;
-use App\Models\PengumpulanTugas;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
 
-class PesertaTugasController extends Controller
+class PengumpulanTugasController extends Controller
 {
-    /**
-     * Daftar tugas peserta.
-     */
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $peserta = $this->getPeserta();
-
-        $tugas = Tugas::with([
-            'materi',
-            'pelatihan',
-            'kelas',
-            'tahap',
-        ])
-        ->where('status', 'published')
-        ->orderByDesc('created_at')
-        ->get()
-        ->map(function ($tugas) use ($peserta) {
-
-            $pengumpulan = PengumpulanTugas::where(
-                'tugas_id',
-                $tugas->id
-            )
-            ->where(
-                'peserta_id',
-                $peserta->id
-            )
-            ->latest()
-            ->first();
-
-            return [
-                'id' => $tugas->id,
-                'judul' => $tugas->judul,
-                'deskripsi' => $tugas->deskripsi,
-                'deadline' => $tugas->deadline,
-                'nilai_maksimal' => $tugas->nilai_maksimal,
-                'materi' => $tugas->materi,
-                'pelatihan' => $tugas->pelatihan,
-                'kelas' => $tugas->kelas,
-                'tahap' => $tugas->tahap,
-
-                'pengumpulan' => $pengumpulan ? [
-                    'id' => $pengumpulan->id,
-                    'file' => $pengumpulan->file,
-                    'catatan' => $pengumpulan->catatan,
-                    'nilai' => $pengumpulan->nilai,
-                    'feedback' => $pengumpulan->feedback,
-                    'dikumpulkan_at' =>
-                        $pengumpulan->dikumpulkan_at,
-                ] : null,
-            ];
-        });
-
-        return Inertia::render(
-            'Peserta/Tugas/Index',
-            [
-                'tugas' => $tugas,
-            ]
-        );
-    }
-
-    /**
-     * Detail tugas.
-     */
-    public function show(Tugas $tugas): Response
-    {
-        $peserta = $this->getPeserta();
-
-        abort_if(
-            $tugas->status !== 'published',
-            404
-        );
-
-        $tugas->load([
-            'materi',
-            'pelatihan',
-            'kelas',
-            'tahap',
+        $query = PengumpulanTugas::with([
+            'tugas',
+            'peserta',
+            'penilai',
         ]);
 
-        $pengumpulan = PengumpulanTugas::where(
-            'tugas_id',
-            $tugas->id
-        )
-        ->where(
-            'peserta_id',
-            $peserta->id
-        )
-        ->latest()
-        ->first();
-
-        return Inertia::render(
-            'Peserta/Tugas/Show',
-            [
-                'tugas' => $tugas,
-                'pengumpulan' => $pengumpulan,
-            ]
-        );
-    }
-
-    /**
-     * Peserta mengumpulkan tugas.
-     */
-    public function store(
-        Request $request,
-        Tugas $tugas
-    ): RedirectResponse {
-        $peserta = $this->getPeserta();
-
-        abort_if(
-            $tugas->status !== 'published',
-            404
-        );
-
-        if (
-            $tugas->deadline &&
-            now()->greaterThan($tugas->deadline)
-        ) {
-            return back()->with(
-                'error',
-                'Batas waktu pengumpulan tugas sudah berakhir.'
-            );
+        if ($request->filled('tugas_id')) {
+            $query->where('tugas_id', $request->tugas_id);
         }
 
-        $validated = $request->validate([
-            'file' => [
-                'required',
-                'file',
-                'max:10240',
-                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar',
-            ],
+        if ($request->filled('peserta_id')) {
+            $query->where('peserta_id', $request->peserta_id);
+        }
 
-            'catatan' => [
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $pengumpulanTugas = $query
+            ->latest('created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('PengumpulanTugas/Index', [
+            'pengumpulanTugas' => $pengumpulanTugas,
+            'filters' => $request->only([
+                'tugas_id',
+                'peserta_id',
+                'status',
+            ]),
+            'tugas' => Tugas::select('id', 'judul')->get(),
+            'pesertas' => Peserta::select('id', 'nama')->get(),
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('PengumpulanTugas/Create', [
+            'tugasList' => Tugas::select('id', 'judul')->get(),
+            'pesertas' => Peserta::select('id', 'nama')->get(),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'tugas_id' => [
+                'required',
+                'exists:tugas,id',
+            ],
+            'peserta_id' => [
+                'required',
+                'exists:peserta,id',
+                Rule::unique('pengumpulan_tugas', 'peserta_id')
+                    ->where('tugas_id', $request->input('tugas_id')),
+            ],
+            'jawaban' => [
                 'nullable',
                 'string',
-                'max:2000',
+                'required_without:file',
+            ],
+            'file' => [
+                'nullable',
+                'file',
+                'max:10240',
+                'required_without:jawaban',
             ],
         ]);
 
-        $file = $request->file('file');
+        $data = [
+            'tugas_id' => $validated['tugas_id'],
+            'peserta_id' => $validated['peserta_id'],
+            'jawaban' => $validated['jawaban'] ?? null,
+            'dikumpulkan_at' => now(),
+            'status' => 'dikumpulkan',
+        ];
 
-        $path = $file->store(
-            'pengumpulan-tugas',
-            'public'
-        );
-
-        $pengumpulanLama =
-            PengumpulanTugas::where(
-                'tugas_id',
-                $tugas->id
-            )
-            ->where(
-                'peserta_id',
-                $peserta->id
-            )
-            ->first();
-
-        if ($pengumpulanLama) {
-
-            if (
-                $pengumpulanLama->file &&
-                Storage::disk('public')->exists(
-                    $pengumpulanLama->file
-                )
-            ) {
-                Storage::disk('public')->delete(
-                    $pengumpulanLama->file
-                );
-            }
-
-            $pengumpulanLama->update([
-                'file' => $path,
-                'catatan' =>
-                    $validated['catatan'] ?? null,
-                'dikumpulkan_at' => now(),
-            ]);
-
-        } else {
-
-            PengumpulanTugas::create([
-                'tugas_id' => $tugas->id,
-                'peserta_id' => $peserta->id,
-                'file' => $path,
-                'catatan' =>
-                    $validated['catatan'] ?? null,
-                'dikumpulkan_at' => now(),
-            ]);
+        if ($request->hasFile('file')) {
+            $data['file_path'] = $request
+                ->file('file')
+                ->store('pengumpulan-tugas', 'public');
         }
 
+        PengumpulanTugas::create($data);
+
         return redirect()
-            ->route(
-                'peserta.tugas.show',
-                $tugas
-            )
-            ->with(
-                'success',
-                'Tugas berhasil dikumpulkan.'
-            );
+            ->route('pengumpulan-tugas.index')
+            ->with('success', 'Pengumpulan tugas berhasil disimpan.');
     }
 
-    private function getPeserta(): Peserta
-    {
-        $user = Auth::user();
+    public function show(
+        PengumpulanTugas $pengumpulanTugas
+    ): Response {
+        $pengumpulanTugas->load([
+            'tugas',
+            'peserta',
+            'penilai',
+        ]);
 
-        /*
-         * Sesuaikan bagian ini dengan relasi
-         * User -> Peserta pada project Anda.
-         */
-        $peserta = $user->peserta;
+        return Inertia::render('PengumpulanTugas/Show', [
+            'pengumpulanTugas' => $pengumpulanTugas,
+        ]);
+    }
 
-        abort_unless(
-            $peserta,
-            403,
-            'Akun ini belum terhubung dengan data peserta.'
-        );
+    public function edit(
+        PengumpulanTugas $pengumpulanTugas
+    ): Response {
+        $pengumpulanTugas->load([
+            'tugas',
+            'peserta',
+        ]);
 
-        return $peserta;
+        return Inertia::render('PengumpulanTugas/Edit', [
+            'pengumpulanTugas' => $pengumpulanTugas,
+        ]);
+    }
+
+    public function update(
+        Request $request,
+        PengumpulanTugas $pengumpulanTugas
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'nilai' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:100',
+            ],
+            'feedback' => [
+                'nullable',
+                'string',
+            ],
+            'status' => [
+                'required',
+                Rule::in([
+                    'belum_dikumpulkan',
+                    'dikumpulkan',
+                    'dinilai',
+                    'terlambat',
+                ]),
+            ],
+        ]);
+
+        if ($validated['status'] === 'dinilai') {
+            $validated['dinilai_oleh'] = Auth::id();
+            $validated['dinilai_at'] = now();
+        } else {
+            $validated['dinilai_oleh'] = null;
+            $validated['dinilai_at'] = null;
+        }
+
+        $pengumpulanTugas->update($validated);
+
+        return redirect()
+            ->route('pengumpulan-tugas.index')
+            ->with('success', 'Penilaian tugas berhasil disimpan.');
+    }
+
+    public function destroy(
+        PengumpulanTugas $pengumpulanTugas
+    ): RedirectResponse {
+        if ($pengumpulanTugas->file_path) {
+            Storage::disk('public')->delete(
+                $pengumpulanTugas->file_path
+            );
+        }
+
+        $pengumpulanTugas->delete();
+
+        return redirect()
+            ->route('pengumpulan-tugas.index')
+            ->with('success', 'Data pengumpulan tugas berhasil dihapus.');
     }
 }

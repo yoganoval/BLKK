@@ -34,46 +34,115 @@ use App\Http\Controllers\TahapController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\UserFaceController;
-use Inertia\Inertia;
-use App\Http\Controllers\PesertaDashboardController;
-use App\Http\Controllers\Auth\PesertaLoginController;
+use App\Http\Controllers\PengaturanRekapNilaiController;
+// use Inertia\Inertia;
 
-// Login peserta
-Route::middleware('guest:peserta')->group(function () {
-    Route::get('/peserta/login', [
-        PesertaLoginController::class,
-        'create',
-    ])->name('peserta.login');
 
-    Route::post('/peserta/login', [
-        PesertaLoginController::class,
-        'store',
-    ])->name('peserta.login.store');
+use App\Http\Controllers\Peserta\PesertaDashboardController;
+use App\Http\Controllers\Peserta\PesertaMateriController;
+use App\Http\Controllers\Peserta\PesertaTugasController as PesertaLmsTugasController;
+use App\Http\Controllers\Peserta\PesertaPengumpulanTugasController as PesertaLmsPengumpulanTugasController;
+use App\Http\Controllers\Peserta\PesertaKuisController;
+use App\Http\Controllers\Peserta\PesertaJawabanKuisController;
+use App\Http\Controllers\Peserta\PesertaProgresBelajarController;
+use App\Http\Controllers\Peserta\PesertaSertifikatController;
+
+
+////////// PESERTA //////////
+
+// Dashboard dan logout peserta
+Route::middleware('auth:peserta')->group(function () {
+    Route::get('/peserta/dashboard', [
+        PesertaDashboardController::class,
+        'index',
+    ])
+        ->middleware('permission:peserta.dashboard.index,peserta')
+        ->name('peserta.dashboard');
+
+    Route::post('/peserta/logout', [
+        AuthenticatedSessionController::class,
+        'destroy',
+    ])->name('peserta.logout');
 });
 
 
-// Dashboard peserta
-Route::get('/peserta/dashboard', [
-    PesertaDashboardController::class,
-    'index',
-])
-    ->middleware([
-        'auth:peserta',
-        'permission:peserta.dashboard.index,peserta',
-    ])
-    ->name('peserta.dashboard');
-
-
-// Logout peserta
-Route::post('/peserta/logout', [
-    PesertaLoginController::class,
-    'destroy',
-])
+// Fitur LMS peserta
+Route::prefix('peserta')
+    ->name('peserta.')
     ->middleware('auth:peserta')
-    ->name('peserta.logout');
+    ->group(function () {
+
+        // MATERI
+        Route::get('/materi', [
+            PesertaMateriController::class,
+            'index',
+        ])->name('materi.index');
+
+        Route::get('/materi/{materi}', [
+            PesertaMateriController::class,
+            'show',
+        ])->name('materi.show');
 
 
+        // TUGAS
+         Route::get('/tugas', [
+            PesertaLmsTugasController::class,
+            'index'
+        ])->name('tugas.index');
 
+        Route::get('/tugas/{tugas}', [
+            PesertaLmsTugasController::class,
+            'show'
+        ])->name('tugas.show');
+
+        // PENGUMPULAN TUGAS
+        Route::post('/tugas/{tugas}/kumpulkan', [
+            PesertaLmsPengumpulanTugasController::class,
+            'store',
+        ])->name('tugas.kumpulkan');
+
+
+        // KUIS
+        Route::get('/kuis', [
+            PesertaKuisController::class,
+            'index',
+        ])->name('kuis.index');
+
+        Route::get('/kuis/{kuis}', [
+            PesertaKuisController::class,
+            'show',
+        ])->name('kuis.show');
+
+        Route::post('/kuis/{kuis}/jawaban', [
+            PesertaJawabanKuisController::class,
+            'store',
+        ])->name('kuis.jawaban.store');
+
+
+        // PROGRES BELAJAR
+        Route::get('/progres', [
+            PesertaProgresBelajarController::class,
+            'index',
+        ])->name('progres.index');
+
+        // RIWAYAT PENGUMPULAN TUGAS
+        Route::get('/pengumpulan-tugas', [
+            PesertaLmsPengumpulanTugasController::class,
+            'index',
+        ])->name('pengumpulan.index');
+
+        // SERTIFIKAT
+        Route::get('/sertifikat', [
+            PesertaSertifikatController::class,
+            'index',
+        ])->name('sertifikat.index');
+
+        Route::get('/sertifikat/{sertifikat}/download', [
+            PesertaSertifikatController::class,
+            'download',
+        ])->name('sertifikat.download');
+
+    });
 
 
 
@@ -637,9 +706,6 @@ Route::middleware('auth')->group(function () {
         ->name('jadwals.destroy');
 
 
-
-
-
     /*
     |--------------------------------------------------------------------------
     | Jadwal Staff
@@ -730,11 +796,6 @@ Route::middleware('auth')->group(function () {
             'update' => 'permission:hari-libur.edit',
             'destroy' => 'permission:hari-libur.delete',
         ]);
-
-
-
-        
-
 
     Route::resource(
         'lokasi-absensi',
@@ -1288,8 +1349,10 @@ Route::post(
     
 
     
-    Route::resource('tugas', TugasController::class
-    )->middleware([
+    Route::resource('pengumpulan-tugas', PengumpulanTugasController::class)
+    ->parameters([
+    'pengumpulan-tugas' => 'pengumpulan_tugas',
+    ])->middleware([
         'index' => 'permission:tugas.index',
         'show' => 'permission:tugas.show',
         'create' => 'permission:tugas.create',
@@ -1314,19 +1377,18 @@ Route::post(
 
 
     Route::get(
-        '/peserta/tugas',
-        [PesertaTugasController::class, 'index']
-    )->name('peserta.tugas.index');
+        '/pengaturan-rekap-nilai',
+        [PengaturanRekapNilaiController::class, 'index']
+    )
+        ->middleware('permission:pengaturan-rekap-nilai.index')
+        ->name('pengaturan-rekap-nilai.index');
 
-    Route::get(
-        '/peserta/tugas/{tugas}',
-        [PesertaTugasController::class, 'show']
-    )->name('peserta.tugas.show');
-
-    Route::post(
-        '/peserta/tugas/{tugas}/kumpulkan',
-        [PesertaTugasController::class, 'store']
-    )->name('peserta.tugas.kumpulkan');
+    Route::put(
+        '/pengaturan-rekap-nilai/{kelas}',
+        [PengaturanRekapNilaiController::class, 'update']
+    )
+        ->middleware('permission:pengaturan-rekap-nilai.edit')
+        ->name('pengaturan-rekap-nilai.update');
     
     
     Route::resource(

@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Peserta;
 use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,6 +22,7 @@ class PengumpulanTugasController extends Controller
         $query = PengumpulanTugas::with([
             'tugas',
             'peserta',
+            'penilai',
         ]);
 
         if ($request->filled('tugas_id')) {
@@ -94,42 +96,58 @@ class PengumpulanTugasController extends Controller
                 'exists:peserta,id',
             ],
 
+            'jawaban' => [
+                'nullable',
+                'string',
+            ],
+
             'file' => [
                 'nullable',
                 'file',
                 'max:51200',
                 'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png,webp,zip,rar,mp4,webm',
-            ],
-
-            'catatan' => [
-                'nullable',
-                'string',
+                'required_without:jawaban',
             ],
         ]);
 
-        $tugas = Tugas::findOrFail($validated['tugas_id']);
+        if (
+            blank($validated['jawaban'] ?? null) &&
+            !$request->hasFile('file')
+        ) {
+            return back()
+                ->withErrors([
+                    'jawaban' => 'Isi jawaban atau lampirkan file terlebih dahulu.',
+                ])
+                ->withInput();
+        }
+
+        $sudahMengumpulkan = PengumpulanTugas::where(
+            'tugas_id',
+            $validated['tugas_id']
+        )
+            ->where('peserta_id', $validated['peserta_id'])
+            ->exists();
+
+        if ($sudahMengumpulkan) {
+            return back()
+                ->withErrors([
+                    'peserta_id' => 'Peserta sudah memiliki pengumpulan untuk tugas ini.',
+                ])
+                ->withInput();
+        }
 
         $data = [
             'tugas_id' => $validated['tugas_id'],
             'peserta_id' => $validated['peserta_id'],
-            'catatan' => $validated['catatan'] ?? null,
+            'jawaban' => $validated['jawaban'] ?? null,
+            'dikumpulkan_at' => now(),
             'status' => 'dikumpulkan',
-            'tanggal_kumpul' => now(),
         ];
 
         if ($request->hasFile('file')) {
-            $file = $request->file('file');
-
-            $path = $file->store(
-                'pengumpulan-tugas/' . $tugas->id,
+            $data['file_path'] = $request->file('file')->store(
+                'pengumpulan-tugas',
                 'public'
-            );
-
-            $data['file_path'] = $path;
-            $data['nama_file'] = $file->getClientOriginalName();
-            $data['tipe_file'] = $file->getClientMimeType();
-            $data['ukuran'] = round(
-                $file->getSize() / 1024
             );
         }
 
@@ -141,7 +159,7 @@ class PengumpulanTugasController extends Controller
     }
 
     /**
-     * Detail pengumpulan.
+     * Detail pengumpulan tugas.
      */
     public function show(
         PengumpulanTugas $pengumpulanTugas
@@ -149,18 +167,16 @@ class PengumpulanTugasController extends Controller
         $pengumpulanTugas->load([
             'tugas.materi',
             'peserta',
+            'penilai',
         ]);
 
-        return Inertia::render(
-            'PengumpulanTugas/Show',
-            [
-                'pengumpulanTugas' => $pengumpulanTugas,
-            ]
-        );
+        return Inertia::render('PengumpulanTugas/Show', [
+            'pengumpulanTugas' => $pengumpulanTugas,
+        ]);
     }
 
     /**
-     * Form edit pengumpulan / penilaian.
+     * Form edit dan penilaian tugas.
      */
     public function edit(
         PengumpulanTugas $pengumpulanTugas
@@ -168,18 +184,16 @@ class PengumpulanTugasController extends Controller
         $pengumpulanTugas->load([
             'tugas',
             'peserta',
+            'penilai',
         ]);
 
-        return Inertia::render(
-            'PengumpulanTugas/Edit',
-            [
-                'pengumpulanTugas' => $pengumpulanTugas,
-            ]
-        );
+        return Inertia::render('PengumpulanTugas/Edit', [
+            'pengumpulanTugas' => $pengumpulanTugas,
+        ]);
     }
 
     /**
-     * Update pengumpulan / penilaian.
+     * Menyimpan nilai, umpan balik, dan status.
      */
     public function update(
         Request $request,
@@ -190,38 +204,56 @@ class PengumpulanTugasController extends Controller
                 'nullable',
                 'numeric',
                 'min:0',
+                'max:100',
             ],
 
-            'umpan_balik' => [
+            'feedback' => [
                 'nullable',
                 'string',
+                'max:5000',
             ],
 
             'status' => [
                 'required',
-                'in:dikumpulkan,dinilai,revisi',
+                Rule::in([
+                    'belum_dikumpulkan',
+                    'dikumpulkan',
+                    'dinilai',
+                    'terlambat',
+                ]),
             ],
         ]);
+
+        if ($validated['status'] === 'dinilai') {
+            if ($validated['nilai'] === null) {
+                return back()
+                    ->withErrors([
+                        'nilai' => 'Nilai harus diisi sebelum tugas ditandai sudah dinilai.',
+                    ])
+                    ->withInput();
+            }
+
+            $validated['dinilai_oleh'] = auth()->id();
+            $validated['dinilai_at'] = now();
+        } else {
+            $validated['dinilai_oleh'] = null;
+            $validated['dinilai_at'] = null;
+        }
 
         $pengumpulanTugas->update($validated);
 
         return redirect()
             ->route('pengumpulan-tugas.index')
-            ->with('success', 'Pengumpulan tugas berhasil diperbarui.');
+            ->with('success', 'Penilaian tugas berhasil disimpan.');
     }
 
     /**
-     * Hapus pengumpulan.
+     * Menghapus pengumpulan beserta file terkait.
      */
     public function destroy(
         PengumpulanTugas $pengumpulanTugas
     ): RedirectResponse {
-        if (
-            $pengumpulanTugas->file_path &&
-            Storage::disk('public')->exists(
-                $pengumpulanTugas->file_path
-            )
-        ) {
+        if ($pengumpulanTugas->file_path) {
             Storage::disk('public')->delete(
                 $pengumpulanTugas->file_path
             );

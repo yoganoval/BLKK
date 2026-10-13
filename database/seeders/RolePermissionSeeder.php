@@ -20,6 +20,7 @@ class RolePermissionSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
+
         $permissions = [
 
             // Dashboard
@@ -54,7 +55,7 @@ class RolePermissionSeeder extends Seeder
             'pelatihan.create',
             'pelatihan.edit',
             'pelatihan.delete',
-            
+
             // Pendaftaran
             'pendaftaran.view',
             'pendaftaran.create',
@@ -103,11 +104,88 @@ class RolePermissionSeeder extends Seeder
             'jadwal.edit',
             'jadwal.delete',
 
+            // Jadwal Staff
+            'jadwal-staff.index',
+            'jadwal-staff.create',
+            'jadwal-staff.show',
+            'jadwal-staff.edit',
+            'jadwal-staff.delete',
+            'jadwal-staff.absen',
+            'jadwal-staff.masuk',
+            'jadwal-staff.pulang',
+
             // Program Pelatihan
             'programpelatihan.view',
             'programpelatihan.create',
             'programpelatihan.edit',
             'programpelatihan.delete',
+
+            // Hari Libur
+            'hari-libur.index',
+            'hari-libur.show',
+            'hari-libur.create',
+            'hari-libur.edit',
+            'hari-libur.delete',
+
+            // Lokasi Absensi
+            'lokasi-absensi.index',
+            'lokasi-absensi.show',
+            'lokasi-absensi.create',
+            'lokasi-absensi.edit',
+            'lokasi-absensi.delete',
+
+            // Inventaris
+            'inventaris.index',
+            'inventaris.show',
+            'inventaris.create',
+            'inventaris.edit',
+            'inventaris.delete',
+
+            // Kategori Inventaris
+            'kategori-inventaris.index',
+            'kategori-inventaris.show',
+            'kategori-inventaris.create',
+            'kategori-inventaris.edit',
+            'kategori-inventaris.delete',
+
+            // LPJ Keuangan
+            'lpj-keuangan.index',
+            'lpj-keuangan.create',
+            'lpj-keuangan.show',
+            'lpj-keuangan.edit',
+            'lpj-keuangan.delete',
+            'lpj-keuangan.pengeluaran',
+            'lpj-keuangan.ajukan',
+            'lpj-keuangan.setujui',
+            'lpj-keuangan.tolak',
+
+            // Materi
+            'materi.index',
+            'materi.show',
+            'materi.create',
+            'materi.edit',
+            'materi.delete',
+
+            // Tugas
+            'tugas.index',
+            'tugas.show',
+            'tugas.create',
+            'tugas.edit',
+            'tugas.delete',
+
+            // Pengumpulan Tugas
+            'pengumpulan-tugas.index',
+            'pengumpulan-tugas.show',
+            'pengumpulan-tugas.create',
+            'pengumpulan-tugas.edit',
+            'pengumpulan-tugas.delete',
+
+            // Pengaturan Rekap Nilai
+            'pengaturan-rekap-nilai.index',
+            'pengaturan-rekap-nilai.edit',
+
+            // Dashboard Peserta
+            'peserta.dashboard.index',
         ];
 
         /*

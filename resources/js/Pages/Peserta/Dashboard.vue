@@ -1,97 +1,288 @@
-<script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3'
+<script setup>
+import { Link } from '@inertiajs/vue3'
 
-const page = usePage()
-
-const user = page.props.auth?.user as
-    | { nama?: string; name?: string; username?: string }
-    | undefined
-
-const namaPeserta =
-    user?.nama ?? user?.name ?? user?.username ?? 'Peserta'
+defineProps({
+    peserta: {
+        type: Object,
+        required: true,
+    },
+    pelatihanDiikuti: {
+        type: Array,
+        default: () => [],
+    },
+    nilai: {
+        type: Array,
+        default: () => [],
+    },
+})
 </script>
 
 <template>
-    <Head title="Dashboard Peserta" />
-
-    <div class="min-h-screen bg-gray-50 text-gray-800">
-        <header
-            class="flex items-center justify-between border-b bg-white px-5 py-4 md:px-8"
-        >
-            <div>
-                <h1 class="text-lg font-bold text-blue-700">
-                    BLKK Salafiyah Syafi’iyah
-                </h1>
-                <p class="text-sm text-gray-500">Portal Peserta Pelatihan</p>
-            </div>
-
-            <Link
-                :href="route('peserta.logout')"
-                method="post"
-                as="button"
-                class="rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
-            >
-                Keluar
-            </Link>
+    <main class="page">
+        <header class="header">
+            <h1>Dashboard Peserta</h1>
+            <p class="welcome">
+                Selamat datang, {{ peserta.nama }}!
+            </p>
         </header>
 
-        <main class="mx-auto max-w-7xl space-y-6 px-5 py-8 md:px-8">
-            <section
-                class="rounded-2xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-white shadow-sm md:p-8"
+        <!-- Pelatihan yang diikuti -->
+        <section class="card">
+            <h2>Pelatihan Saya</h2>
+
+            <div
+                v-if="pelatihanDiikuti.length"
+                class="training-list"
             >
-                <p class="text-sm text-blue-100">Selamat datang,</p>
-                <h2 class="mt-2 text-2xl font-bold md:text-3xl">
-                    {{ namaPeserta }}!
-                </h2>
-                <p class="mt-2 text-sm text-blue-100">
-                    Pantau kegiatan pelatihanmu melalui portal peserta BLKK.
-                </p>
-            </section>
+                <article
+                    v-for="pelatihan in pelatihanDiikuti"
+                    :key="pelatihan.pendaftaran_id"
+                    class="training-item"
+                >
+                    <h3>{{ pelatihan.nama_pelatihan }}</h3>
 
-            <section>
-                <h2 class="mb-4 text-lg font-bold">Menu Peserta</h2>
+                    <p>
+                        <b>Tahap:</b>
+                        {{ pelatihan.tahap || '-' }}
+                    </p>
 
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <Link
-                        href="/peserta/dashboard"
-                        class="rounded-xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                        <div
-                            class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-blue-100 text-xl"
+                    <p>
+                        <b>Kelas:</b>
+                        {{ pelatihan.kelas || '-' }}
+                    </p>
+
+                    <p>
+                        <b>Status pendaftaran:</b>
+                        {{ pelatihan.status || '-' }}
+                    </p>
+                </article>
+            </div>
+
+            <p v-else class="empty">
+                Anda belum terdaftar pada pelatihan apa pun.
+            </p>
+        </section>
+
+        <!-- Menu LMS -->
+        <section class="card">
+            <h2>Menu Pembelajaran</h2>
+
+            <nav class="menu">
+                <Link :href="route('peserta.materi.index')">
+                    Materi
+                </Link>
+
+                <Link :href="route('peserta.tugas.index')">
+                    Tugas
+                </Link>
+
+                <Link :href="route('peserta.pengumpulan.index')">
+                    Pengumpulan Tugas
+                </Link>
+
+                <Link :href="route('peserta.kuis.index')">
+                    Kuis
+                </Link>
+
+                <Link :href="route('peserta.progres.index')">
+                    Progres Belajar
+                </Link>
+
+                <Link :href="route('peserta.sertifikat.index')">
+                    Sertifikat
+                </Link>
+            </nav>
+        </section>
+
+        <!-- Nilai peserta -->
+        <section class="card">
+            <h2>Nilai Saya</h2>
+
+            <div v-if="nilai.length" class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Pelatihan</th>
+                            <th>Tahap</th>
+                            <th>Komponen</th>
+                            <th>Nilai</th>
+                            <th>Catatan</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr
+                            v-for="(item, index) in nilai"
+                            :key="item.id"
                         >
-                            📚
-                        </div>
-                        <h3 class="font-semibold">Pelatihan Saya</h3>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Lihat informasi pelatihan yang diikuti.
-                        </p>
-                    </Link>
+                            <td>{{ index + 1 }}</td>
+                            <td>{{ item.nama_pelatihan }}</td>
+                            <td>{{ item.tahap }}</td>
+                            <td>{{ item.komponen }}</td>
+                            <td class="score">{{ item.nilai }}</td>
+                            <td>{{ item.catatan || '-' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                    <div class="rounded-xl border bg-white p-5 shadow-sm">
-                        <div
-                            class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-amber-100 text-xl"
-                        >
-                            📝
-                        </div>
-                        <h3 class="font-semibold">Tugas</h3>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Akses tugas dari instruktur.
-                        </p>
-                    </div>
+            <p v-else class="empty">
+                Belum ada nilai yang diberikan oleh instruktur.
+            </p>
+        </section>
 
-                    <div class="rounded-xl border bg-white p-5 shadow-sm">
-                        <div
-                            class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-green-100 text-xl"
-                        >
-                            📊
-                        </div>
-                        <h3 class="font-semibold">Nilai</h3>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Pantau hasil penilaian pelatihan.
-                        </p>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
+        <!-- Informasi peserta -->
+        <section class="card">
+            <h2>Informasi Peserta</h2>
+
+            <p>
+                <b>Nama:</b>
+                {{ peserta.nama }}
+            </p>
+
+            <p>
+                <b>Alamat:</b>
+                {{ peserta.alamat || '-' }}
+            </p>
+
+            <p>
+                <b>Kamar:</b>
+                {{ peserta.kamar || '-' }}
+            </p>
+
+            <p>
+                <b>Lembaga:</b>
+                {{ peserta.lembaga || '-' }}
+            </p>
+        </section>
+    </main>
 </template>
+
+<style scoped>
+.page {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    color: #1e293b;
+}
+
+.header {
+    margin-bottom: 24px;
+}
+
+h1 {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.welcome {
+    margin-top: 8px;
+    color: #64748b;
+}
+
+.card {
+    margin-top: 22px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.card h2 {
+    margin-bottom: 16px;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.training-list {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fit,
+        minmax(230px, 1fr)
+    );
+    gap: 14px;
+}
+
+.training-item {
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.training-item h3 {
+    margin-bottom: 10px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.training-item p,
+.card > p {
+    margin-top: 8px;
+}
+
+.menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.menu a {
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #334155;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.menu a:hover {
+    background: #f1f5f9;
+}
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+th,
+td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+th {
+    background: #f8fafc;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #475569;
+}
+
+.score {
+    font-weight: 700;
+}
+
+.empty {
+    color: #64748b;
+}
+
+@media (max-width: 640px) {
+    .page {
+        margin: 12px auto;
+        padding: 12px;
+    }
+
+    .card {
+        padding: 14px;
+    }
+}
+</style>
