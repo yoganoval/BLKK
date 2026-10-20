@@ -76,7 +76,7 @@ class MateriController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('Admin/Materi/Index', [
+        return Inertia::render('Materi/Index', [
             'materis' => $materis,
             'filters' => $request->only([
                 'search',
@@ -111,7 +111,7 @@ class MateriController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Admin/Materi/Create', [
+        return Inertia::render('Materi/Create', [
             'programPelatihans' => ProgramPelatihan::with([
                 'pelatihan:id,nama',
                 'tahap:id,nama',
@@ -171,11 +171,11 @@ class MateriController extends Controller
                 'string',
             ],
 
-            'urutan' => [
-                'required',
-                'integer',
-                'min:1',
-            ],
+            // 'urutan' => [
+            //     'required',
+            //     'integer',
+            //     'min:1',
+            // ],
 
             'status' => [
                 'required',
@@ -196,7 +196,7 @@ class MateriController extends Controller
                 'judul' => $validated['judul'],
                 'deskripsi' => $validated['deskripsi'] ?? null,
                 'isi_materi' => $validated['isi_materi'] ?? null,
-                'urutan' => $validated['urutan'],
+                // 'urutan' => $validated['urutan'],
                 'status' => $validated['status'],
                 'created_by' => auth()->id(),
             ]);
@@ -223,7 +223,7 @@ class MateriController extends Controller
             'files',
         ]);
 
-        return Inertia::render('Admin/Materi/Show', [
+        return Inertia::render('Materi/Show', [
             'materi' => $materi,
         ]);
     }
@@ -240,7 +240,7 @@ class MateriController extends Controller
             'files',
         ]);
 
-        return Inertia::render('Admin/Materi/Edit', [
+        return Inertia::render('Materi/Edit', [
             'materi' => $materi,
 
             'programPelatihans' => ProgramPelatihan::with([
@@ -302,11 +302,11 @@ class MateriController extends Controller
                 'string',
             ],
 
-            'urutan' => [
-                'required',
-                'integer',
-                'min:1',
-            ],
+            // 'urutan' => [
+            //     'required',
+            //     'integer',
+            //     'min:1',
+            // ],
 
             'status' => [
                 'required',
@@ -323,7 +323,7 @@ class MateriController extends Controller
                 'judul' => $validated['judul'],
                 'deskripsi' => $validated['deskripsi'] ?? null,
                 'isi_materi' => $validated['isi_materi'] ?? null,
-                'urutan' => $validated['urutan'],
+                // 'urutan' => $validated['urutan'],
                 'status' => $validated['status'],
             ]);
 

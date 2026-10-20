@@ -15,14 +15,14 @@ class OpsiJawaban extends Model
         'opsi',
         'teks',
         'is_correct',
-        'urutan',
+        // 'urutan',
     ];
 
     protected function casts(): array
     {
         return [
             'is_correct' => 'boolean',
-            'urutan' => 'integer',
+            // 'urutan' => 'integer',
         ];
     }
 

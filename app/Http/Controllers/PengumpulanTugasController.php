@@ -7,6 +7,7 @@ use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ use Inertia\Response;
 class PengumpulanTugasController extends Controller
 {
     /**
-     * Daftar semua pengumpulan tugas.
+     * Menampilkan daftar pengumpulan tugas.
      */
     public function index(Request $request): Response
     {
@@ -26,15 +27,15 @@ class PengumpulanTugasController extends Controller
         ]);
 
         if ($request->filled('tugas_id')) {
-            $query->where('tugas_id', $request->tugas_id);
+            $query->where('tugas_id', $request->input('tugas_id'));
         }
 
         if ($request->filled('peserta_id')) {
-            $query->where('peserta_id', $request->peserta_id);
+            $query->where('peserta_id', $request->input('peserta_id'));
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('status', $request->input('status'));
         }
 
         $pengumpulanTugas = $query
@@ -46,37 +47,43 @@ class PengumpulanTugasController extends Controller
             'pengumpulanTugas' => $pengumpulanTugas,
 
             'filters' => [
-                'tugas_id' => $request->tugas_id,
-                'peserta_id' => $request->peserta_id,
-                'status' => $request->status,
+                'tugas_id' => $request->input('tugas_id', ''),
+                'peserta_id' => $request->input('peserta_id', ''),
+                'status' => $request->input('status', ''),
             ],
 
-            'tugas' => Tugas::orderBy('judul')->get(),
+            'tugas' => Tugas::query()
+                ->orderBy('judul')
+                ->get(),
 
-            'pesertas' => Peserta::orderBy('nama')->get(),
+            'pesertas' => Peserta::query()
+                ->orderBy('nama')
+                ->get(),
         ]);
     }
 
     /**
-     * Form pengumpulan tugas.
+     * Menampilkan form pengumpulan tugas.
      */
     public function create(Request $request): Response
     {
         $tugas = null;
 
         if ($request->filled('tugas_id')) {
-            $tugas = Tugas::with('materi')
-                ->findOrFail($request->tugas_id);
+            $tugas = Tugas::query()
+                ->findOrFail($request->input('tugas_id'));
         }
 
         return Inertia::render('PengumpulanTugas/Create', [
             'tugas' => $tugas,
 
-            'tugasList' => Tugas::with('materi')
+            'tugasList' => Tugas::query()
                 ->orderBy('judul')
                 ->get(),
 
-            'pesertas' => Peserta::orderBy('nama')->get(),
+            'pesertas' => Peserta::query()
+                ->orderBy('nama')
+                ->get(),
         ]);
     }
 
@@ -88,11 +95,13 @@ class PengumpulanTugasController extends Controller
         $validated = $request->validate([
             'tugas_id' => [
                 'required',
+                'integer',
                 'exists:tugas,id',
             ],
 
             'peserta_id' => [
                 'required',
+                'integer',
                 'exists:peserta,id',
             ],
 
@@ -110,10 +119,9 @@ class PengumpulanTugasController extends Controller
             ],
         ]);
 
-        if (
-            blank($validated['jawaban'] ?? null) &&
-            !$request->hasFile('file')
-        ) {
+        $jawaban = trim($validated['jawaban'] ?? '');
+
+        if ($jawaban === '' && !$request->hasFile('file')) {
             return back()
                 ->withErrors([
                     'jawaban' => 'Isi jawaban atau lampirkan file terlebih dahulu.',
@@ -121,10 +129,8 @@ class PengumpulanTugasController extends Controller
                 ->withInput();
         }
 
-        $sudahMengumpulkan = PengumpulanTugas::where(
-            'tugas_id',
-            $validated['tugas_id']
-        )
+        $sudahMengumpulkan = PengumpulanTugas::query()
+            ->where('tugas_id', $validated['tugas_id'])
             ->where('peserta_id', $validated['peserta_id'])
             ->exists();
 
@@ -136,22 +142,31 @@ class PengumpulanTugasController extends Controller
                 ->withInput();
         }
 
-        $data = [
-            'tugas_id' => $validated['tugas_id'],
-            'peserta_id' => $validated['peserta_id'],
-            'jawaban' => $validated['jawaban'] ?? null,
-            'dikumpulkan_at' => now(),
-            'status' => 'dikumpulkan',
-        ];
+        $filePath = null;
 
         if ($request->hasFile('file')) {
-            $data['file_path'] = $request->file('file')->store(
+            $filePath = $request->file('file')->store(
                 'pengumpulan-tugas',
                 'public'
             );
         }
 
-        PengumpulanTugas::create($data);
+        try {
+            PengumpulanTugas::create([
+                'tugas_id' => $validated['tugas_id'],
+                'peserta_id' => $validated['peserta_id'],
+                'jawaban' => $jawaban !== '' ? $jawaban : null,
+                'file_path' => $filePath,
+                'dikumpulkan_at' => now(),
+                'status' => 'dikumpulkan',
+            ]);
+        } catch (\Throwable $exception) {
+            if ($filePath !== null) {
+                Storage::disk('public')->delete($filePath);
+            }
+
+            throw $exception;
+        }
 
         return redirect()
             ->route('pengumpulan-tugas.index')
@@ -159,13 +174,13 @@ class PengumpulanTugasController extends Controller
     }
 
     /**
-     * Detail pengumpulan tugas.
+     * Menampilkan detail pengumpulan tugas.
      */
     public function show(
         PengumpulanTugas $pengumpulanTugas
     ): Response {
         $pengumpulanTugas->load([
-            'tugas.materi',
+            'tugas',
             'peserta',
             'penilai',
         ]);
@@ -176,7 +191,7 @@ class PengumpulanTugasController extends Controller
     }
 
     /**
-     * Form edit dan penilaian tugas.
+     * Menampilkan form edit dan penilaian.
      */
     public function edit(
         PengumpulanTugas $pengumpulanTugas
@@ -193,7 +208,7 @@ class PengumpulanTugasController extends Controller
     }
 
     /**
-     * Menyimpan nilai, umpan balik, dan status.
+     * Memperbarui nilai, feedback, dan status pengumpulan.
      */
     public function update(
         Request $request,
@@ -225,7 +240,10 @@ class PengumpulanTugasController extends Controller
         ]);
 
         if ($validated['status'] === 'dinilai') {
-            if ($validated['nilai'] === null) {
+            if (
+                !isset($validated['nilai'])
+                || $validated['nilai'] === ''
+            ) {
                 return back()
                     ->withErrors([
                         'nilai' => 'Nilai harus diisi sebelum tugas ditandai sudah dinilai.',
@@ -233,7 +251,7 @@ class PengumpulanTugasController extends Controller
                     ->withInput();
             }
 
-            $validated['dinilai_oleh'] = auth()->id();
+            $validated['dinilai_oleh'] = Auth::id();
             $validated['dinilai_at'] = now();
         } else {
             $validated['dinilai_oleh'] = null;
@@ -248,7 +266,7 @@ class PengumpulanTugasController extends Controller
     }
 
     /**
-     * Menghapus pengumpulan beserta file terkait.
+     * Menghapus pengumpulan tugas dan file terkait.
      */
     public function destroy(
         PengumpulanTugas $pengumpulanTugas

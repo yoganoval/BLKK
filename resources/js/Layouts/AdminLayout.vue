@@ -217,6 +217,34 @@ const menus = [
             },
 
             {
+                label: 'Kuis',
+                url: '/kuis',
+                permission: 'kuis.index',
+                icon: 'clipboard-list',
+            },
+
+            {
+                label: 'Koreksi Esai',
+                url: '/koreksi-esai',
+                permission: 'koreksi-esai.index',
+                icon: 'clipboard-list',
+            },
+
+            {
+                label: 'Soal Kuis',
+                url: '/soal-kuis',
+                permission: 'soal.index',
+                icon: 'file-question',
+            },
+
+            {
+                label: 'Opsi Jawaban Kuis',
+                url: '/opsi-jawaban-kuis',
+                permission: 'opsi-jawaban.index',
+                icon: 'list-check',
+            },
+
+            {
                 label: 'Komponen Nilai',
                 url: '/komponen-nilai',
                 permission: '',

@@ -20,7 +20,7 @@ class Materi extends Model
         'judul',
         'deskripsi',
         'isi_materi',
-        'urutan',
+        // 'urutan',
         'status',
         'created_by',
     ];

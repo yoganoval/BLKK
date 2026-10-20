@@ -2,73 +2,107 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Materi;
+use App\Models\Kelas;
+use App\Models\ProgramPelatihan;
 use App\Models\Tugas;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TugasController extends Controller
 {
     /**
-     * Menampilkan daftar tugas.
+     * Menampilkan daftar tugas beserta pencarian dan filter.
      */
     public function index(Request $request): Response
     {
-        $query = Tugas::with([
-            'materi',
-            'pelatihan',
-            'kelas',
-            'tahap',
-            'creator',
-        ]);
+        $search = trim($request->input('search', ''));
 
-        // Filter berdasarkan materi
-        if ($request->filled('materi_id')) {
-            $query->where('materi_id', $request->materi_id);
-        }
-
-        // Pencarian berdasarkan judul
-        if ($request->filled('search')) {
-            $query->where(
-                'judul',
-                'like',
-                '%' . $request->search . '%'
-            );
-        }
-
-        $tugas = $query
-            ->orderByDesc('created_at')
+        $tugas = Tugas::query()
+            ->with([
+                'programPelatihan.pelatihan',
+                'programPelatihan.tahap',
+                'kelas',
+                'pembuat',
+            ])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where('judul', 'like', "%{$search}%");
+            })
+            ->when(
+                $request->filled('program_pelatihan_id'),
+                function ($query) use ($request) {
+                    $query->where(
+                        'program_pelatihan_id',
+                        $request->input('program_pelatihan_id')
+                    );
+                }
+            )
+            ->when(
+                $request->filled('kelas_id'),
+                function ($query) use ($request) {
+                    $query->where(
+                        'kelas_id',
+                        $request->input('kelas_id')
+                    );
+                }
+            )
+            ->when(
+                $request->filled('status'),
+                function ($query) use ($request) {
+                    $query->where(
+                        'status',
+                        $request->input('status')
+                    );
+                }
+            )
+            ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('Tugas/Index', [
             'tugas' => $tugas,
 
-            'filters' => [
-                'search' => $request->search,
-                'materi_id' => $request->materi_id,
-            ],
+            'filters' => $request->only([
+                'search',
+                'program_pelatihan_id',
+                'kelas_id',
+                'status',
+            ]),
 
-            'materis' => Materi::orderBy('judul')->get(),
+            'programPelatihans' => ProgramPelatihan::with([
+                'pelatihan:id,nama',
+                'tahap:id,nama',
+            ])
+                ->orderBy('nama')
+                ->get(),
+
+            'kelass' => Kelas::orderBy('nama')->get([
+                'id',
+                'nama',
+                'durasi_hari',
+            ]),
         ]);
     }
 
     /**
-     * Form tambah tugas.
+     * Menampilkan form tambah tugas.
      */
     public function create(): Response
     {
         return Inertia::render('Tugas/Create', [
-            'materis' => Materi::with([
-                'pelatihan',
-                'kelas',
-                'tahap',
+            'programPelatihans' => ProgramPelatihan::with([
+                'pelatihan:id,nama',
+                'tahap:id,nama',
             ])
-                ->orderBy('judul')
+                ->orderBy('nama')
                 ->get(),
+
+            'kelass' => Kelas::orderBy('nama')->get([
+                'id',
+                'nama',
+                'durasi_hari',
+            ]),
         ]);
     }
 
@@ -78,20 +112,22 @@ class TugasController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'materi_id' => [
+            'program_pelatihan_id' => [
                 'required',
-                'exists:materi,id',
+                'integer',
+                'exists:program_pelatihan,id',
+            ],
+
+            'kelas_id' => [
+                'required',
+                'integer',
+                'exists:kelas,id',
             ],
 
             'judul' => [
                 'required',
                 'string',
                 'max:255',
-            ],
-
-            'deskripsi' => [
-                'nullable',
-                'string',
             ],
 
             'instruksi' => [
@@ -116,52 +152,13 @@ class TugasController extends Controller
             ],
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Ambil data materi
-        |--------------------------------------------------------------------------
-        |
-        | Dari materi kita mengambil pelatihan, kelas dan tahap.
-        |
-        */
+        $validated['created_by'] = auth()->id();
 
-        $materi = Materi::findOrFail(
-            $validated['materi_id']
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Simpan tugas
-        |--------------------------------------------------------------------------
-        */
-
-        Tugas::create([
-            'pelatihan_id' => $materi->pelatihan_id,
-            'kelas_id' => $materi->kelas_id,
-            'tahap_id' => $materi->tahap_id,
-            'materi_id' => $materi->id,
-
-            'judul' => $validated['judul'],
-
-            'deskripsi' => $validated['deskripsi'] ?? null,
-
-            'instruksi' => $validated['instruksi'] ?? null,
-
-            'deadline' => $validated['deadline'] ?? null,
-
-            'nilai_maksimal' => $validated['nilai_maksimal'],
-
-            'status' => $validated['status'],
-
-            'created_by' => Auth::id(),
-        ]);
+        Tugas::create($validated);
 
         return redirect()
             ->route('tugas.index')
-            ->with(
-                'success',
-                'Tugas berhasil ditambahkan.'
-            );
+            ->with('success', 'Tugas berhasil ditambahkan.');
     }
 
     /**
@@ -170,12 +167,11 @@ class TugasController extends Controller
     public function show(Tugas $tugas): Response
     {
         $tugas->load([
-            'materi',
-            'pelatihan',
+            'programPelatihan.pelatihan',
+            'programPelatihan.tahap',
             'kelas',
-            'tahap',
-            'creator',
-            'pengumpulanTugas.peserta',
+            'pembuat',
+            'pengumpulanTugas',
         ]);
 
         return Inertia::render('Tugas/Show', [
@@ -184,114 +180,101 @@ class TugasController extends Controller
     }
 
     /**
-     * Form edit tugas.
+     * Menampilkan form edit tugas.
      */
-public function edit(Tugas $tuga)
+public function edit(Tugas $tuga): Response
 {
     $tuga->load([
-        'materi.pelatihan',
-        'materi.kelas',
-        'materi.tahap',
-    ]);
-
-    $materis = Materi::with([
-        'pelatihan',
+        'programPelatihan.pelatihan',
+        'programPelatihan.tahap',
         'kelas',
-        'tahap',
-    ])
-    ->orderBy('judul')
-    ->get();
+        'pembuat',
+    ]);
 
     return Inertia::render('Tugas/Edit', [
         'tugas' => $tuga,
-        'materis' => $materis,
+        'programPelatihans' => ProgramPelatihan::with([
+            'pelatihan:id,nama',
+            'tahap:id,nama',
+        ])->orderBy('nama')->get(),
+        'kelass' => Kelas::orderBy('nama')
+            ->get(['id', 'nama', 'durasi_hari']),
     ]);
 }
 
     /**
-     * Update tugas.
+     * Memperbarui tugas.
      */
-public function update(
-    Request $request,
-    Tugas $tuga
-): RedirectResponse {
-    $validated = $request->validate([
-        'materi_id' => [
-            'required',
-            'exists:materi,id',
-        ],
+    public function update(
+        Request $request,
+        Tugas $tuga
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'program_pelatihan_id' => [
+                'required',
+                'integer',
+                'exists:program_pelatihan,id',
+            ],
 
-        'judul' => [
-            'required',
-            'string',
-            'max:255',
-        ],
+            'kelas_id' => [
+                'required',
+                'integer',
+                'exists:kelas,id',
+            ],
 
-        'deskripsi' => [
-            'nullable',
-            'string',
-        ],
+            'judul' => [
+                'required',
+                'string',
+                'max:255',
+            ],
 
-        'instruksi' => [
-            'nullable',
-            'string',
-        ],
+            'instruksi' => [
+                'nullable',
+                'string',
+            ],
 
-        'deadline' => [
-            'nullable',
-            'date',
-        ],
+            'deadline' => [
+                'nullable',
+                'date',
+            ],
 
-        'nilai_maksimal' => [
-            'required',
-            'numeric',
-            'min:0',
-        ],
+            'nilai_maksimal' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
 
-        'status' => [
-            'required',
-            'in:draft,published,closed',
-        ],
-    ]);
+            'status' => [
+                'required',
+                'in:draft,published,closed',
+            ],
+        ]);
 
-    $materi = Materi::findOrFail(
-        $validated['materi_id']
-    );
+        $tuga->update($validated);
 
-    $tuga->update([
-        'pelatihan_id' => $materi->pelatihan_id,
-        'kelas_id' => $materi->kelas_id,
-        'tahap_id' => $materi->tahap_id,
-        'materi_id' => $materi->id,
-
-        'judul' => $validated['judul'],
-        'deskripsi' => $validated['deskripsi'] ?? null,
-        'instruksi' => $validated['instruksi'] ?? null,
-        'deadline' => $validated['deadline'] ?? null,
-        'nilai_maksimal' => $validated['nilai_maksimal'],
-        'status' => $validated['status'],
-    ]);
-
-    return redirect()
-        ->route('tugas.index')
-        ->with(
-            'success',
-            'Tugas berhasil diperbarui.'
-        );
-}
+        return redirect()
+            ->route('tugas.index')
+            ->with('success', 'Tugas berhasil diperbarui.');
+    }
 
     /**
-     * Hapus tugas.
+     * Menghapus tugas jika belum memiliki pengumpulan.
      */
     public function destroy(Tugas $tugas): RedirectResponse
     {
+        if ($tugas->pengumpulanTugas()->exists()) {
+            return redirect()
+                ->route('tugas.index')
+                ->with(
+                    'error',
+                    'Tugas tidak dapat dihapus karena sudah memiliki pengumpulan.'
+                );
+        }
+
         $tugas->delete();
 
         return redirect()
             ->route('tugas.index')
-            ->with(
-                'success',
-                'Tugas berhasil dihapus.'
-            );
+            ->with('success', 'Tugas berhasil dihapus.');
     }
 }

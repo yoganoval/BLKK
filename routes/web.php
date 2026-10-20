@@ -35,7 +35,10 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\UserFaceController;
 use App\Http\Controllers\PengaturanRekapNilaiController;
-// use Inertia\Inertia;
+use App\Http\Controllers\KuisController;
+use App\Http\Controllers\SoalController;
+use App\Http\Controllers\OpsiJawabanController;
+use App\Http\Controllers\KoreksiEsaiController;
 
 
 use App\Http\Controllers\Peserta\PesertaDashboardController;
@@ -99,7 +102,7 @@ Route::prefix('peserta')
         Route::post('/tugas/{tugas}/kumpulkan', [
             PesertaLmsPengumpulanTugasController::class,
             'store',
-        ])->name('tugas.kumpulkan');
+        ])->name('tugas.store');
 
 
         // KUIS
@@ -118,7 +121,32 @@ Route::prefix('peserta')
             'store',
         ])->name('kuis.jawaban.store');
 
+        Route::post(
+            '/kuis/{kuis}/mulai',
+            [PesertaKuisController::class, 'start']
+        )->name('kuis.start');
 
+        Route::get(
+            '/percobaan-kuis/{percobaanKuis}',
+            [PesertaKuisController::class, 'attempt']
+        )->name('kuis.attempt');
+
+        Route::put(
+            '/percobaan-kuis/{percobaanKuis}/jawaban',
+            [PesertaKuisController::class, 'saveAnswer']
+        )->name('kuis.answer');
+
+        Route::post(
+            '/percobaan-kuis/{percobaanKuis}/selesai',
+            [PesertaKuisController::class, 'submit']
+        )->name('kuis.submit');
+
+        Route::get(
+            '/percobaan-kuis/{percobaanKuis}/hasil',
+            [PesertaKuisController::class, 'result']
+        )->name('kuis.result');
+
+        
         // PROGRES BELAJAR
         Route::get('/progres', [
             PesertaProgresBelajarController::class,
@@ -1326,6 +1354,9 @@ Route::post('/lpj-keuangan/{lpjKeuangan}/tolak', [
     ->middleware('permission:lpj-keuangan.tolak')
     ->name('lpj-keuangan.tolak');
 
+
+
+
 Route::resource('materi', MateriController::class
 )->middleware([
     'index' => 'permission:materi.index',
@@ -1363,18 +1394,98 @@ Route::post(
     ]);
     
     Route::resource(
-        'pengumpulan-tugas',
-        PengumpulanTugasController::class
+        'tugas',
+        TugasController::class
         )->middleware([
-            'index' => 'permission:pengumpulan-tugas.index',
-            'show' => 'permission:pengumpulan-tugas.show',
-            'create' => 'permission:pengumpulan-tugas.create',
-            'store' => 'permission:pengumpulan-tugas.create',
-            'edit' => 'permission:pengumpulan-tugas.edit',
-            'update' => 'permission:pengumpulan-tugas.edit',
-            'destroy' => 'permission:pengumpulan-tugas.delete',
+            'index' => 'permission:tugas.index',
+            'show' => 'permission:tugas.show',
+            'create' => 'permission:tugas.create',
+            'store' => 'permission:tugas.create',
+            'edit' => 'permission:tugas.edit',
+            'update' => 'permission:tugas.edit',
+            'destroy' => 'permission:tugas.delete',
         ]);
 
+        
+    Route::resource(
+        'tugas',
+        TugasController::class
+        )->middleware([
+            'index' => 'permission:tugas.index',
+            'show' => 'permission:tugas.show',
+            'create' => 'permission:tugas.create',
+            'store' => 'permission:tugas.create',
+            'edit' => 'permission:tugas.edit',
+            'update' => 'permission:tugas.edit',
+            'destroy' => 'permission:tugas.delete',
+        ]);
+
+ // =========================
+// MANAJEMEN KUIS
+// =========================
+Route::resource('kuis', KuisController::class)
+    ->middleware([
+        'index'   => 'permission:kuis.index',
+        'show'    => 'permission:kuis.show',
+        'create'  => 'permission:kuis.create',
+        'store'   => 'permission:kuis.create',
+        'edit'    => 'permission:kuis.edit',
+        'update'  => 'permission:kuis.edit',
+        'destroy' => 'permission:kuis.delete',
+    ]);
+
+    // =========================
+    // DAFTAR SOAL GLOBAL
+    // =========================
+    Route::get('/soal-kuis', [SoalController::class, 'globalIndex'])
+        ->middleware('permission:soal.index')
+        ->name('soal.global.index');
+
+    // Resource soal tetap bersarang
+    Route::resource('kuis.soal', SoalController::class)
+        ->middleware([
+            'index'   => 'permission:soal.index',
+            'show'    => 'permission:soal.show',
+            'create'  => 'permission:soal.create',
+            'store'   => 'permission:soal.create',
+            'edit'    => 'permission:soal.edit',
+            'update'  => 'permission:soal.edit',
+            'destroy' => 'permission:soal.delete',
+        ]);
+
+    // =========================
+    // DAFTAR OPSI JAWABAN GLOBAL
+    // =========================
+    Route::get('/opsi-jawaban-kuis', [
+        OpsiJawabanController::class,
+        'globalIndex',
+    ])
+        ->middleware('permission:opsi-jawaban.index')
+        ->name('opsi-jawaban.global.index');
+
+    // Resource opsi jawaban tetap bersarang
+    Route::resource('soal.opsi-jawaban', OpsiJawabanController::class)
+        ->middleware([
+            'index'   => 'permission:opsi-jawaban.index',
+            'show'    => 'permission:opsi-jawaban.show',
+            'create'  => 'permission:opsi-jawaban.create',
+            'store'   => 'permission:opsi-jawaban.create',
+            'edit'    => 'permission:opsi-jawaban.edit',
+            'update'  => 'permission:opsi-jawaban.edit',
+            'destroy' => 'permission:opsi-jawaban.delete',
+        ]);
+
+    Route::get('/koreksi-esai', [KoreksiEsaiController::class, 'index'])
+        ->name('koreksi-esai.index')
+        ->middleware('permission:koreksi-esai.index');
+
+    Route::get('/koreksi-esai/{percobaanKuis}', [KoreksiEsaiController::class, 'show'])
+        ->name('koreksi-esai.show')
+        ->middleware('permission:koreksi-esai.show');
+
+    Route::put('/koreksi-esai/{percobaanKuis}', [KoreksiEsaiController::class, 'update'])
+        ->name('koreksi-esai.update')
+        ->middleware('permission:koreksi-esai.edit');
 
     Route::get(
         '/pengaturan-rekap-nilai',

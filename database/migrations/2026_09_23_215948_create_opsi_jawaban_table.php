@@ -21,8 +21,8 @@ return new class extends Migration
             $table->boolean('is_correct')
                 ->default(false);
 
-            $table->unsignedInteger('urutan')
-                ->default(1);
+            // $table->unsignedInteger('urutan')
+            //     ->default(1);
 
             $table->timestamps();
 

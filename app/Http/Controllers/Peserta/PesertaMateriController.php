@@ -11,7 +11,7 @@ use Inertia\Inertia;
 class PesertaMateriController extends Controller
 {
     /**
-     * Menampilkan daftar materi peserta.
+     * Menampilkan daftar materi yang sudah diterbitkan.
      */
     public function index(Request $request)
     {
@@ -21,13 +21,12 @@ class PesertaMateriController extends Controller
 
         $materi = Materi::query()
             ->with([
-                'pelatihan',
+                'programPelatihan.pelatihan',
+                'programPelatihan.tahap',
                 'kelas',
-                'tahap',
                 'files',
             ])
-            ->where('status', 'aktif')
-            ->orderBy('urutan')
+            ->where('status', 'published')
             ->orderBy('id')
             ->paginate(10)
             ->withQueryString();
@@ -46,12 +45,12 @@ class PesertaMateriController extends Controller
 
         abort_unless($peserta, 401);
 
-        abort_unless($materi->status === 'aktif', 404);
+        abort_unless($materi->status === 'published', 404);
 
         $materi->load([
-            'pelatihan',
+            'programPelatihan.pelatihan',
+            'programPelatihan.tahap',
             'kelas',
-            'tahap',
             'files',
         ]);
 

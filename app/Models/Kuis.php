@@ -34,20 +34,23 @@ class Kuis extends Model
 
     public function programPelatihan(): BelongsTo
     {
-        return $this->belongsTo(ProgramPelatihan::class);
+        return $this->belongsTo(
+            ProgramPelatihan::class,
+            'program_pelatihan_id'
+        );
     }
 
     public function kelas(): BelongsTo
     {
-        return $this->belongsTo(Kelas::class);
+        return $this->belongsTo(Kelas::class, 'kelas_id');
     }
 
     public function materi(): BelongsTo
     {
-        return $this->belongsTo(Materi::class);
+        return $this->belongsTo(Materi::class, 'materi_id');
     }
 
-    public function pembuat(): BelongsTo
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
@@ -65,6 +68,11 @@ class Kuis extends Model
 
     public function jawabanKuis(): HasMany
     {
-        return $this->hasMany(JawabanKuis::class, 'kuis_id');
+        return $this->hasManyThrough(
+            JawabanKuis::class,
+            PercobaanKuis::class,
+            'kuis_id',
+            'percobaan_kuis_id'
+        );
     }
 }

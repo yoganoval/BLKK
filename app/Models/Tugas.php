@@ -11,12 +11,9 @@ class Tugas extends Model
     protected $table = 'tugas';
 
     protected $fillable = [
-        'pelatihan_id',
+        'program_pelatihan_id',
         'kelas_id',
-        'tahap_id',
-        'materi_id',
         'judul',
-        'deskripsi',
         'instruksi',
         'deadline',
         'nilai_maksimal',
@@ -32,29 +29,28 @@ class Tugas extends Model
         ];
     }
 
-    public function pelatihan(): BelongsTo
+    public function programPelatihan(): BelongsTo
     {
-        return $this->belongsTo(Pelatihan::class, 'pelatihan_id');
+        return $this->belongsTo(
+            ProgramPelatihan::class,
+            'program_pelatihan_id'
+        );
     }
 
     public function kelas(): BelongsTo
     {
-        return $this->belongsTo(Kelas::class, 'kelas_id');
-    }
-
-    public function tahap(): BelongsTo
-    {
-        return $this->belongsTo(Tahap::class, 'tahap_id');
-    }
-
-    public function materi(): BelongsTo
-    {
-        return $this->belongsTo(Materi::class, 'materi_id');
+        return $this->belongsTo(
+            Kelas::class,
+            'kelas_id'
+        );
     }
 
     public function pembuat(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(
+            User::class,
+            'created_by'
+        );
     }
 
     public function pengumpulanTugas(): HasMany
@@ -63,10 +59,5 @@ class Tugas extends Model
             PengumpulanTugas::class,
             'tugas_id'
         );
-    }
-
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
     }
 }

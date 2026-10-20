@@ -11,16 +11,12 @@ return new class extends Migration
         Schema::create('jawaban_kuis', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('kuis_id')
-                ->constrained('kuis')
+            $table->foreignId('percobaan_kuis_id')
+                ->constrained('percobaan_kuis')
                 ->cascadeOnDelete();
 
             $table->foreignId('soal_id')
                 ->constrained('soal')
-                ->cascadeOnDelete();
-
-            $table->foreignId('peserta_id')
-                ->constrained('peserta')
                 ->cascadeOnDelete();
 
             $table->foreignId('opsi_jawaban_id')
@@ -28,21 +24,21 @@ return new class extends Migration
                 ->constrained('opsi_jawaban')
                 ->nullOnDelete();
 
-            $table->boolean('benar')
-                ->nullable();
+            $table->boolean('benar')->nullable();
 
-            $table->decimal('nilai', 5, 2)
+            $table->decimal('nilai', 7, 2)
                 ->default(0);
 
             $table->timestamp('answered_at')->nullable();
 
             $table->timestamps();
 
-            $table->unique([
-                'kuis_id',
-                'soal_id',
-                'peserta_id'
-            ]);
+            // Satu soal hanya memiliki satu jawaban
+            // dalam satu percobaan tertentu.
+            $table->unique(
+                ['percobaan_kuis_id', 'soal_id'],
+                'jawaban_kuis_percobaan_soal_unique'
+            );
         });
     }
 

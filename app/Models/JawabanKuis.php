@@ -10,14 +10,15 @@ class JawabanKuis extends Model
     protected $table = 'jawaban_kuis';
 
     protected $fillable = [
-        'kuis_id',
-        'soal_id',
-        'peserta_id',
         'percobaan_kuis_id',
+        'soal_id',
         'opsi_jawaban_id',
+        'jawaban_text',
         'benar',
         'nilai',
         'answered_at',
+        'catatan_koreksi',
+        'dikoreksi_at',
     ];
 
     protected function casts(): array
@@ -29,27 +30,17 @@ class JawabanKuis extends Model
         ];
     }
 
-    public function kuis(): BelongsTo
-    {
-        return $this->belongsTo(Kuis::class, 'kuis_id');
-    }
-
-    public function soal(): BelongsTo
-    {
-        return $this->belongsTo(Soal::class, 'soal_id');
-    }
-
-    public function peserta(): BelongsTo
-    {
-        return $this->belongsTo(Peserta::class, 'peserta_id');
-    }
-
     public function percobaanKuis(): BelongsTo
     {
         return $this->belongsTo(
             PercobaanKuis::class,
             'percobaan_kuis_id'
         );
+    }
+
+    public function soal(): BelongsTo
+    {
+        return $this->belongsTo(Soal::class, 'soal_id');
     }
 
     public function opsiJawaban(): BelongsTo

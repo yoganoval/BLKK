@@ -180,6 +180,41 @@ class RolePermissionSeeder extends Seeder
             'pengumpulan-tugas.edit',
             'pengumpulan-tugas.delete',
 
+            // Kuis
+            'kuis.index',
+            'kuis.show',
+            'kuis.create',
+            'kuis.edit',
+            'kuis.delete',
+
+            // koreksi-esai
+            'koreksi-esai.index',
+            'koreksi-esai.show',
+            'koreksi-esai.create',
+            'koreksi-esai.edit',
+            'koreksi-esai.delete',
+
+            // opsi-jawaban
+            'opsi-jawaban.index',
+            'opsi-jawaban.show',
+            'opsi-jawaban.create',
+            'opsi-jawaban.edit',
+            'opsi-jawaban.delete',
+
+            // Soal
+            'soal.index',
+            'soal.show',
+            'soal.create',
+            'soal.edit',
+            'soal.delete',
+
+            // Opsi Jawaban
+            'opsi-jawaban.index',
+            'opsi-jawaban.show',
+            'opsi-jawaban.create',
+            'opsi-jawaban.edit',
+            'opsi-jawaban.delete',
+
             // Pengaturan Rekap Nilai
             'pengaturan-rekap-nilai.index',
             'pengaturan-rekap-nilai.edit',

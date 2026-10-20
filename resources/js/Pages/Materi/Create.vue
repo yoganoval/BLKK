@@ -25,7 +25,7 @@ const form = useForm({
     judul: '',
     deskripsi: '',
     isi_materi: '',
-    urutan: 1,
+    // urutan: 1,
     status: 'draft',
 })
 
@@ -335,7 +335,7 @@ function submit() {
                         </div>
 
                         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                            <div>
+                            <!-- <div>
                                 <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                                     Urutan
                                     <span class="text-red-500">*</span>
@@ -352,7 +352,7 @@ function submit() {
                                 <p v-if="form.errors.urutan" class="mt-2 text-sm text-red-600">
                                     {{ form.errors.urutan }}
                                 </p>
-                            </div>
+                            </div> -->
 
                             <div>
                                 <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">

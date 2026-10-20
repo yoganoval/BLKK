@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('kuis', function (Blueprint $table) {
             $table->id();
 
-             $table->foreignId('program_pelatihan_id')
+            $table->foreignId('program_pelatihan_id')
                 ->constrained('program_pelatihan')
                 ->cascadeOnDelete();
 
@@ -38,7 +38,7 @@ return new class extends Migration
             $table->enum('status', [
                 'draft',
                 'published',
-                'closed'
+                'closed',
             ])->default('draft');
 
             $table->foreignId('created_by')

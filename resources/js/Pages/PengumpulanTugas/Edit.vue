@@ -1,178 +1,113 @@
-<script setup lang="ts">
-import AdminLayout from '@/Layouts/AdminLayout.vue'
+<script setup>
+import { computed } from 'vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
+import AdminLayout from '@/Layouts/AdminLayout.vue'
+import { ArrowLeft, Save, Award } from 'lucide-vue-next'
 
-defineOptions({
-    layout: AdminLayout,
-})
-
-interface Peserta {
-    id: number
-    nama: string
-}
-
-interface Tugas {
-    id: number
-    judul: string
-    deadline?: string | null
-}
-
-interface PengumpulanTugas {
-    id: number
-    peserta?: Peserta | null
-    tugas?: Tugas | null
-    jawaban: string | null
-    file_path: string | null
-    dikumpulkan_at: string | null
-    nilai: number | string | null
-    feedback: string | null
-    status: string
-}
+defineOptions({ layout: AdminLayout })
 
 const props = defineProps({
-    pengumpulanTugas: {
-        type: Object,
-        required: true,
-    },
-});
+    pengumpulanTugas: { type: Object, required: true },
+})
 
+const item = computed(() => props.pengumpulanTugas)
 
 const form = useForm({
-    nilai: props.pengumpulanTugas.nilai ?? '',
-    feedback: props.pengumpulanTugas.feedback ?? '',
-    status: props.pengumpulanTugas.status ?? 'dikumpulkan',
-});
+    nilai: item.value.nilai ?? '',
+    feedback: item.value.feedback ?? '',
+    status: item.value.status ?? 'dikumpulkan',
+})
 
-const statusOptions = [
-    { value: 'belum_dikumpulkan', label: 'Belum Dikumpulkan' },
+const statuses = [
+    { value: 'belum_dikumpulkan', label: 'Belum dikumpulkan' },
     { value: 'dikumpulkan', label: 'Dikumpulkan' },
-    { value: 'dinilai', label: 'Dinilai' },
+    { value: 'dinilai', label: 'Sudah dinilai' },
     { value: 'terlambat', label: 'Terlambat' },
 ]
 
-const submit = () => {
-    form.put(
-        route('pengumpulan-tugas.update', {
-            pengumpulan_tugas: props.pengumpulanTugas.id,
-        })
-    );
-};
-
-function formatTanggal(value: string | null) {
-    if (!value) return '-'
-
-    return new Date(value).toLocaleString('id-ID', {
-        dateStyle: 'long',
-        timeStyle: 'short',
-    })
+function submit() {
+    form.put(route('pengumpulan-tugas.update', item.value.id))
 }
 </script>
 
 <template>
-    <Head title="Penilaian Pengumpulan Tugas" />
+    <Head title="Penilaian Tugas" />
 
-    <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+    <div class="mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
+        <Link
+            :href="route('pengumpulan-tugas.index')"
+            class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-blue-600"
+        >
+            <ArrowLeft class="size-4" />
+            Kembali ke pengumpulan tugas
+        </Link>
+
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
-                Penilaian Pengumpulan Tugas
+            <p class="text-sm font-medium text-blue-600">Penilaian Akademik</p>
+            <h1 class="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+                Penilaian Tugas
             </h1>
-
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Periksa jawaban peserta dan berikan penilaian.
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Periksa pengumpulan peserta dan berikan nilai serta feedback.
             </p>
         </div>
 
-        <!-- Informasi pengumpulan -->
-        <section
-            class="space-y-5 rounded-2xl border border-slate-200
-                   bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
-        >
-            <div class="grid gap-5 sm:grid-cols-2">
-                <div>
-                    <p class="text-sm font-semibold text-slate-500">
-                        Peserta
-                    </p>
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">
+                Informasi Pengumpulan
+            </h2>
 
-                    <p class="mt-1 font-medium text-slate-900 dark:text-white">
-                        {{ props.pengumpulanTugas.peserta?.nama ?? '-' }}
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                    <p class="text-sm text-slate-500">Nama Peserta</p>
+                    <p class="mt-1 font-semibold text-slate-900 dark:text-white">
+                        {{ item.peserta?.nama ?? '-' }}
                     </p>
                 </div>
 
                 <div>
-                    <p class="text-sm font-semibold text-slate-500">
-                        Tugas
-                    </p>
-
-                    <p class="mt-1 font-medium text-slate-900 dark:text-white">
-                        {{ props.pengumpulanTugas.tugas?.judul ?? '-' }}
+                    <p class="text-sm text-slate-500">Judul Tugas</p>
+                    <p class="mt-1 font-semibold text-slate-900 dark:text-white">
+                        {{ item.tugas?.judul ?? '-' }}
                     </p>
                 </div>
             </div>
 
-            <div>
-                <p class="text-sm font-semibold text-slate-500">
-                    Waktu Pengumpulan
+            <div class="mt-5 border-t border-slate-200 pt-5 dark:border-slate-800">
+                <p class="text-sm font-medium text-slate-600 dark:text-slate-300">
+                    Jawaban peserta
                 </p>
-
-                <p class="mt-1 text-slate-900 dark:text-white">
-                    {{ formatTanggal(props.pengumpulanTugas.dikumpulkan_at) }}
-                </p>
-            </div>
-
-            <div>
-                <p class="text-sm font-semibold text-slate-500">
-                    File Jawaban
+                <p class="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700 dark:text-slate-300">
+                    {{ item.jawaban || 'Tidak ada jawaban teks.' }}
                 </p>
 
                 <a
-                    v-if="props.pengumpulanTugas.file_path"
-                    :href="`/storage/${props.pengumpulanTugas.file_path}`"
+                    v-if="item.file_path"
+                    :href="`/storage/${item.file_path.split('/').map(encodeURIComponent).join('/')}`"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="mt-2 inline-flex items-center gap-2
-                           font-medium text-indigo-600 hover:underline
-                           dark:text-indigo-400"
+                    class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
                 >
-                    Lihat / Unduh File Jawaban
+                    Buka lampiran peserta
                 </a>
-
-                <p
-                    v-else
-                    class="mt-1 text-sm text-slate-500"
-                >
-                    Belum ada file yang dilampirkan.
-                </p>
-            </div>
-
-            <div>
-                <p class="text-sm font-semibold text-slate-500">
-                    Jawaban Teks
-                </p>
-
-                <p
-                    class="mt-2 whitespace-pre-wrap text-slate-800
-                           dark:text-slate-200"
-                >
-                    {{ props.pengumpulanTugas.jawaban || 'Belum ada jawaban teks.' }}
-                </p>
             </div>
         </section>
 
-        <!-- Form penilaian -->
         <form
+            class="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 dark:border-slate-800 dark:bg-slate-900"
             @submit.prevent="submit"
-            class="space-y-6 rounded-2xl border border-slate-200
-                   bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
         >
+            <div class="flex items-center gap-2">
+                <Award class="size-5 text-blue-600" />
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">
+                    Form Penilaian
+                </h2>
+            </div>
+
             <div>
-                <label
-                    for="nilai"
-                    class="mb-2 block text-sm font-semibold
-                           text-slate-700 dark:text-slate-200"
-                >
+                <label for="nilai" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
                     Nilai (0–100)
                 </label>
-
                 <input
                     id="nilai"
                     v-model="form.nilai"
@@ -180,131 +115,63 @@ function formatTanggal(value: string | null) {
                     min="0"
                     max="100"
                     step="0.01"
-                    placeholder="Masukkan nilai"
-                    class="w-full rounded-xl border border-slate-300
-                           bg-white px-4 py-3 text-slate-900
-                           outline-none focus:border-indigo-500
-                           focus:ring-2 focus:ring-indigo-500/20
-                           dark:border-slate-700 dark:bg-slate-950
-                           dark:text-white"
+                    placeholder="Contoh: 85"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    :class="{ 'border-red-500': form.errors.nilai }"
                 />
-
-                <p
-                    v-if="form.errors.nilai"
-                    class="mt-1 text-sm text-red-500"
-                >
+                <p v-if="form.errors.nilai" class="mt-1 text-sm text-red-500">
                     {{ form.errors.nilai }}
                 </p>
             </div>
 
             <div>
-                <label
-                    for="feedback"
-                    class="mb-2 block text-sm font-semibold
-                           text-slate-700 dark:text-slate-200"
-                >
-                    Umpan Balik
+                <label for="feedback" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Feedback / Umpan Balik
                 </label>
-
                 <textarea
                     id="feedback"
                     v-model="form.feedback"
                     rows="5"
-                    placeholder="Berikan komentar atau masukan kepada peserta..."
-                    class="w-full rounded-xl border border-slate-300
-                           bg-white px-4 py-3 text-slate-900
-                           outline-none focus:border-indigo-500
-                           focus:ring-2 focus:ring-indigo-500/20
-                           dark:border-slate-700 dark:bg-slate-950
-                           dark:text-white"
+                    maxlength="5000"
+                    placeholder="Berikan masukan, koreksi, atau saran kepada peserta..."
+                    class="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    :class="{ 'border-red-500': form.errors.feedback }"
                 />
-
-                <p
-                    v-if="form.errors.feedback"
-                    class="mt-1 text-sm text-red-500"
-                >
+                <p class="mt-1 text-xs text-slate-500">
+                    {{ form.feedback.length }}/5000 karakter
+                </p>
+                <p v-if="form.errors.feedback" class="mt-1 text-sm text-red-500">
                     {{ form.errors.feedback }}
                 </p>
             </div>
 
             <div>
-                <label
-                    for="file"
-                    class="mb-2 block text-sm font-semibold
-                           text-slate-700 dark:text-slate-200"
-                >
-                    Ganti File Jawaban (Opsional)
+                <label for="status" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Status Pengumpulan
                 </label>
-
-                <input
-                    id="file"
-                    type="file"
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.zip,.rar,.mp4,.webm"
-                    @change="form.file = $event.target.files?.[0] ?? null"
-                    class="block w-full rounded-xl border border-slate-300
-                           bg-white p-3 text-sm text-slate-700
-                           dark:border-slate-700 dark:bg-slate-950
-                           dark:text-slate-200"
-                />
-
-                <p class="mt-1 text-xs text-slate-500">
-                    Maksimal 50 MB. Kosongkan jika tidak ingin mengganti file.
-                </p>
-
-                <p
-                    v-if="form.errors.file"
-                    class="mt-1 text-sm text-red-500"
-                >
-                    {{ form.errors.file }}
-                </p>
-            </div>
-
-            <div>
-                <label
-                    for="status"
-                    class="mb-2 block text-sm font-semibold
-                           text-slate-700 dark:text-slate-200"
-                >
-                    Status
-                </label>
-
                 <select
                     id="status"
                     v-model="form.status"
-                    class="w-full rounded-xl border border-slate-300
-                           bg-white px-4 py-3 text-slate-900
-                           outline-none focus:border-indigo-500
-                           dark:border-slate-700 dark:bg-slate-950
-                           dark:text-white"
+                    required
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    :class="{ 'border-red-500': form.errors.status }"
                 >
-                    <option
-                        v-for="option in statusOptions"
-                        :key="option.value"
-                        :value="option.value"
-                    >
-                        {{ option.label }}
+                    <option v-for="status in statuses" :key="status.value" :value="status.value">
+                        {{ status.label }}
                     </option>
                 </select>
-
-                <p
-                    v-if="form.errors.status"
-                    class="mt-1 text-sm text-red-500"
-                >
+                <p v-if="form.errors.status" class="mt-1 text-sm text-red-500">
                     {{ form.errors.status }}
+                </p>
+                <p v-if="form.status === 'dinilai'" class="mt-2 text-xs text-emerald-600">
+                    Status ini mengharuskan nilai diisi sebelum disimpan.
                 </p>
             </div>
 
-            <div
-                class="flex flex-wrap justify-end gap-3 border-t
-                       border-slate-200 pt-5 dark:border-slate-800"
-            >
+            <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800">
                 <Link
                     :href="route('pengumpulan-tugas.index')"
-                    class="inline-flex items-center justify-center
-                           rounded-xl border border-slate-300 px-5 py-3
-                           text-sm font-semibold text-slate-700
-                           hover:bg-slate-100 dark:border-slate-700
-                           dark:text-slate-200 dark:hover:bg-slate-800"
+                    class="rounded-xl border border-slate-200 px-5 py-3 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                     Batal
                 </Link>
@@ -312,17 +179,10 @@ function formatTanggal(value: string | null) {
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="inline-flex items-center justify-center
-                           rounded-xl bg-indigo-600 px-5 py-3
-                           text-sm font-semibold text-white
-                           hover:bg-indigo-700 disabled:cursor-not-allowed
-                           disabled:opacity-50"
+                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                 >
-                    {{
-                        form.processing
-                            ? 'Menyimpan...'
-                            : 'Simpan Penilaian'
-                    }}
+                    <Save class="size-4" />
+                    {{ form.processing ? 'Menyimpan...' : 'Simpan Penilaian' }}
                 </button>
             </div>
         </form>

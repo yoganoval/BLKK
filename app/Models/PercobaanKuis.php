@@ -21,6 +21,8 @@ class PercobaanKuis extends Model
         'jumlah_dijawab',
         'status',
         'lulus',
+        'soal_ids',
+        'urutan_opsi',
     ];
 
     protected function casts(): array
@@ -33,6 +35,8 @@ class PercobaanKuis extends Model
             'jumlah_benar' => 'integer',
             'jumlah_dijawab' => 'integer',
             'lulus' => 'boolean',
+            'soal_ids' => 'array',
+            'urutan_opsi' => 'array',
         ];
     }
 

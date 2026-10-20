@@ -33,16 +33,25 @@ class PengumpulanTugas extends Model
 
     public function tugas(): BelongsTo
     {
-        return $this->belongsTo(Tugas::class, 'tugas_id');
+        return $this->belongsTo(
+            Tugas::class,
+            'tugas_id'
+        );
     }
 
     public function peserta(): BelongsTo
     {
-        return $this->belongsTo(Peserta::class, 'peserta_id');
+        return $this->belongsTo(
+            Peserta::class,
+            'peserta_id'
+        );
     }
 
     public function penilai(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'dinilai_oleh');
+        return $this->belongsTo(
+            User::class,
+            'dinilai_oleh'
+        );
     }
 }
