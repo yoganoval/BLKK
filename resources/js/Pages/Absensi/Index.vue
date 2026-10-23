@@ -10,10 +10,10 @@ import {
 
 import { Head } from '@inertiajs/vue3'
 import axios from 'axios'
-import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PesertaLayout from '@/Layouts/PesertaLayout.vue'
 
 defineOptions({
-    layout: AdminLayout,
+    layout: PesertaLayout,
 })
 
 const props = defineProps({

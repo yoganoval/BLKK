@@ -51,7 +51,11 @@ class RolePermissionsController extends Controller
             ->toArray();
 
         return Inertia::render('RolePermissions/Edit', [
-            'role' => $role,
+            'role' => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'guard_name' => $role->guard_name,
+            ],
             'permissions' => $permissions,
             'rolePermissions' => $rolePermissions,
         ]);

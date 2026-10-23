@@ -67,7 +67,7 @@ class PermissionController extends Controller
             'actions.*' => [
                 'required',
                 'string',
-                'in:index,create,edit,show,delete',
+                'in:view,index,create,edit,show,delete',
             ],
             'guard_name' => ['required', 'string'],
         ]);

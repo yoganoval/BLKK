@@ -11,6 +11,11 @@ defineOptions({
 
 const actions = [
     {
+        value: 'view',
+        label: 'View',
+        description: 'Melihat detail data',
+    },
+    {
         value: 'index',
         label: 'Index',
         description: 'Melihat daftar data',

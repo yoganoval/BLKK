@@ -115,6 +115,11 @@ const menus = [
         icon: ChartNoAxesColumnIncreasing,
     },
     {
+        label: 'Absen Peserta',
+        url: '/peserta/absensi',
+        icon: ChartNoAxesColumnIncreasing,
+    },
+    {
         label: 'Sertifikat',
         url: '/peserta/sertifikat',
         icon: Award,

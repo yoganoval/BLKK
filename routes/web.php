@@ -49,10 +49,18 @@ use App\Http\Controllers\Peserta\PesertaKuisController;
 use App\Http\Controllers\Peserta\PesertaJawabanKuisController;
 use App\Http\Controllers\Peserta\PesertaProgresBelajarController;
 use App\Http\Controllers\Peserta\PesertaSertifikatController;
+use App\Http\Controllers\Peserta\PesertaAbsensiController;
 
 
 ////////// PESERTA //////////
-
+Route::get('/cek-login-peserta', function () {
+    return response()->json([
+        'guard_peserta' => Auth::guard('peserta')->check(),
+        'guard_web' => Auth::guard('web')->check(),
+        'peserta_id' => Auth::guard('peserta')->id(),
+        'session_id' => session()->getId(),
+    ]);
+});
 // Dashboard dan logout peserta
 Route::middleware('auth:peserta')->group(function () {
     Route::get('/peserta/dashboard', [
@@ -152,6 +160,18 @@ Route::prefix('peserta')
             PesertaProgresBelajarController::class,
             'index',
         ])->name('progres.index');
+
+
+        Route::get('/absensi', [
+            PesertaAbsensiController::class,
+            'index',
+        ])->name('absensi.index');
+
+        Route::post('/absensi/recognize', [
+            PesertaAbsensiController::class,
+            'recognize',
+        ])->name('absensi.recognize');
+            
 
         // RIWAYAT PENGUMPULAN TUGAS
         Route::get('/pengumpulan-tugas', [
@@ -940,6 +960,7 @@ Route::middleware('auth')->group(function () {
     ])
         ->middleware('permission:absensi.create')
         ->name('absensi.recognize');
+
 
     Route::get('/rekap/absensi', [
         AbsensiController::class,

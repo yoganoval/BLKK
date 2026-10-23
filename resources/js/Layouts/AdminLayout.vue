@@ -348,7 +348,7 @@ const menus = [
             },
 
             {
-                label: 'Jadwal Absensi',
+                label: 'Kelola Jadwal Kegiatan',
                 url: '/jadwals',
                 permission: 'jadwal.view',
                 icon: 'calendar',
@@ -365,6 +365,12 @@ const menus = [
                 label: 'Lokasi Absensi Staff',
                 url: '/lokasi-absensi',
                 permission: 'lokasi-absensi.index',
+                icon: 'calendar',
+            },
+            {
+                label: ' Absensi Staff',
+                url: '/absensi-staff',
+                permission: 'absensi-staff.index',
                 icon: 'calendar',
             },
         ],
